@@ -33,6 +33,7 @@ import {
   setItemsTokenIdSuccess,
   setItemsTokenIdFailure,
   SetItemsTokenIdRequestAction,
+  deployItemContentsRequest,
   DEPLOY_ITEM_CONTENTS_REQUEST,
   deployItemContentsSuccess,
   deployItemContentsFailure,
@@ -55,6 +56,8 @@ import { Collection } from 'modules/collection/types'
 import { LOGIN_SUCCESS } from 'modules/identity/actions'
 import { deployContents } from './export'
 import { Item } from './types'
+import { getItem } from './selectors'
+import { hasMetadataChanged } from './utils'
 
 export function* itemSaga() {
   yield takeEvery(FETCH_ITEMS_REQUEST, handleFetchItemsRequest)
@@ -103,7 +106,17 @@ function* handleSaveItemRequest(action: SaveItemRequestAction) {
   const { item, contents } = action.payload
   try {
     const itemWithUpdatedDate = { ...item, updatedAt: Date.now() }
-    yield call(() => saveItem(itemWithUpdatedDate, contents))
+    if (itemWithUpdatedDate.isPublished) {
+      const collection: Collection = yield select(state => getCollection(state, item.collectionId!))
+      yield put(deployItemContentsRequest(collection, itemWithUpdatedDate))
+
+      const originalItem = yield select(state => getItem(state, item.id))
+      if (hasMetadataChanged(originalItem, item)) {
+        yield call(() => savePublishedItem(itemWithUpdatedDate))
+      }
+    } else {
+      yield call(() => saveUnpublishedItem(itemWithUpdatedDate, contents))
+    }
     yield put(saveItemSuccess(itemWithUpdatedDate, contents))
     yield put(closeModal('CreateItemModal'))
     yield put(closeModal('EditPriceAndBeneficiaryModal'))
@@ -184,7 +197,7 @@ function* handleSetItemsTokenIdRequest(action: SetItemsTokenIdRequestAction) {
         ...item,
         tokenId
       }
-      saves.push(call(() => saveItem(newItem)))
+      saves.push(call(() => saveUnpublishedItem(newItem)))
       newItems.push(newItem)
     }
 
@@ -217,6 +230,11 @@ function* handleFetchCollectionRequest(action: FetchCollectionRequestAction) {
   yield put(fetchCollectionItemsRequest(id))
 }
 
-export function saveItem(item: Item, contents: Record<string, Blob> = {}) {
+export function saveUnpublishedItem(item: Item, contents: Record<string, Blob> = {}) {
   return builder.saveItem(item, contents)
+}
+
+export function savePublishedItem(item: Item) {
+  // @TODO: send meta transaction with metadata update
+  console.log('changed: ', item)
 }

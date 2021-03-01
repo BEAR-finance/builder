@@ -158,3 +158,10 @@ export async function generateImage(item: Item, width = 1024, height = 1024) {
   canvas.toBlob(result => (result ? blob.resolve(result) : blob.reject(new Error('Error generating image blob'))))
   return blob
 }
+
+export function hasMetadataChanged(originalItem: Item, item: Item) {
+  return originalItem.name !== item.name ||
+    originalItem.description !== item.description ||
+    originalItem.data.category !== item.data.category ||
+    JSON.stringify(originalItem.data.representations) !== JSON.stringify(item.data.representations)
+}
