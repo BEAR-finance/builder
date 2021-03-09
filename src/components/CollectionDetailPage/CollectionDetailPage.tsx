@@ -1,9 +1,10 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { Section, Row, Dropdown, Narrow, Column, Header, Button, Icon, Popup, Radio, CheckboxProps } from 'decentraland-ui'
-
+import { ContractName, getContract } from 'decentraland-transactions'
 import { t, T } from 'decentraland-dapps/dist/modules/translation/utils'
-
+import { Authorization, AuthorizationType } from 'decentraland-dapps/dist/modules/authorization/types'
+import { hasAuthorization } from 'decentraland-dapps/dist/modules/authorization/utils'
 import { locations } from 'routing/locations'
 import { isOnSale } from 'modules/collection/utils'
 import { isComplete } from 'modules/item/utils'
@@ -13,13 +14,16 @@ import Notice from 'components/Notice'
 import NotFound from 'components/NotFound'
 import BuilderIcon from 'components/Icon'
 import Back from 'components/Back'
+import { AuthorizationModal } from 'components/AuthorizationModal'
 import CollectionItem from './CollectionItem'
-import { Props } from './CollectionDetailPage.types'
+import { Props, State } from './CollectionDetailPage.types'
 import './CollectionDetailPage.css'
 
 const STORAGE_KEY = 'dcl-collection-notice'
 
-export default class CollectionDetailPage extends React.PureComponent<Props> {
+export default class CollectionDetailPage extends React.PureComponent<Props, State> {
+  state = { isAuthorizationModalOpen: false }
+
   handleUpdateManagers = () => {
     const { collection, onOpenModal } = this.props
     onOpenModal('CollectionManagersModal', { collectionId: collection!.id })
@@ -41,8 +45,13 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
   }
 
   handlePublish = () => {
-    const { collection, onOpenModal } = this.props
-    onOpenModal('PublishCollectionModal', { collectionId: collection!.id })
+    const { authorizations, collection, onOpenModal } = this.props
+
+    if (hasAuthorization(authorizations, this.getAuthorization())) {
+      onOpenModal('PublishCollectionModal', { collectionId: collection!.id })
+    } else {
+      this.setState({ isAuthorizationModalOpen: true })
+    }
   }
 
   handleEditName = () => {
@@ -57,6 +66,20 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
     const { checked } = checkboxProps
     if (collection && checked !== undefined) {
       onOpenModal('SellCollectionModal', { collectionId: collection.id, isOnSale: checked })
+    }
+  }
+
+  getAuthorization(): Authorization {
+    const { wallet } = this.props
+    const chainId = wallet.networks.MATIC.chainId
+    const tokenAddress = getContract(ContractName.MANAToken, chainId).address
+    const authorizedAddress = getContract(ContractName.CollectionManager, chainId).address
+    return {
+      type: AuthorizationType.ALLOWANCE,
+      address: wallet.address,
+      tokenAddress,
+      authorizedAddress,
+      chainId
     }
   }
 
@@ -222,7 +245,25 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
             </div>
           )}
         </Narrow>
+        {this.renderAuthorizationModal()}
       </>
+    )
+  }
+
+  handleCloseAuthorizationModal = () => {
+    this.setState({ isAuthorizationModalOpen: false })
+  }
+
+  renderAuthorizationModal() {
+    const { isAuthorizationModalOpen } = this.state
+
+    return (
+      <AuthorizationModal
+        open={isAuthorizationModalOpen}
+        authorization={this.getAuthorization()}
+        onProceed={this.handlePublish}
+        onCancel={this.handleCloseAuthorizationModal}
+      />
     )
   }
 
