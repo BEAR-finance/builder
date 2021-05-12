@@ -6,7 +6,7 @@ import { fromWei } from 'web3x-es/utils'
 
 import { locations } from 'routing/locations'
 import { WearableData } from 'modules/item/types'
-import { getMaxSupply, getMissingBodyShapeType } from 'modules/item/utils'
+import { getBodyShapes, toBodyShapeType, getMaxSupply, getMissingBodyShapeType } from 'modules/item/utils'
 import Notice from 'components/Notice'
 import ConfirmDelete from 'components/ConfirmDelete'
 import ItemImage from 'components/ItemImage'
@@ -29,9 +29,14 @@ export default class ItemDetailPage extends React.PureComponent<Props> {
     onDelete(item!)
   }
 
+  handleChangeItemFile = () => {
+    const { item, onOpenModal } = this.props
+    onOpenModal('CreateItemModal', { item, changeItemFile: true })
+  }
+
   handleAddRepresentationToItem = () => {
     const { item, onOpenModal } = this.props
-    onOpenModal('CreateItemModal', { addRepresentationTo: item })
+    onOpenModal('CreateItemModal', { item, addRepresentation: true })
   }
 
   renderPage() {
@@ -41,12 +46,13 @@ export default class ItemDetailPage extends React.PureComponent<Props> {
     const data = item.data as WearableData
 
     const missingBodyShape = getMissingBodyShapeType(item)
+    const hasActions = missingBodyShape !== null || !item.isPublished
 
     return (
       <>
         <Section>
           <Row>
-            <Back absolute onClick={() => onNavigate(locations.avatar())} />
+            <Back absolute onClick={() => onNavigate(locations.collections())} />
             <Narrow>
               <Row className="page-header">
                 <Column>
@@ -58,43 +64,40 @@ export default class ItemDetailPage extends React.PureComponent<Props> {
                 </Column>
                 <Column align="right" shrink={false} grow={false}>
                   <Row className="actions">
-                    {item.isPublished ? (
-                      <Button secondary compact disabled={true}>
-                        {t('global.published')}
-                      </Button>
-                    ) : (
-                      <>
-                        <Dropdown
-                          trigger={
-                            <Button basic>
-                              <Icon name="ellipsis horizontal" />
-                            </Button>
-                          }
-                          inline
-                          direction="left"
-                        >
-                          <Dropdown.Menu>
-                            {missingBodyShape !== null ? (
-                              <Dropdown.Item
-                                text={t('item_detail_page.add_representation', {
-                                  bodyShape: t(`body_shapes.${missingBodyShape}`).toLowerCase()
-                                })}
-                                onClick={this.handleAddRepresentationToItem}
-                              />
-                            ) : null}
+                    {hasActions ? (
+                      <Dropdown
+                        trigger={
+                          <Button basic>
+                            <Icon name="ellipsis horizontal" />
+                          </Button>
+                        }
+                        inline
+                        direction="left"
+                      >
+                        <Dropdown.Menu>
+                          <Dropdown.Item text={t('item_detail_page.change_item_file')} onClick={this.handleChangeItemFile} />
+                          {missingBodyShape !== null ? (
+                            <Dropdown.Item
+                              text={t('item_detail_page.add_representation', {
+                                bodyShape: t(`body_shapes.${missingBodyShape}`).toLowerCase()
+                              })}
+                              onClick={this.handleAddRepresentationToItem}
+                            />
+                          ) : null}
+                          {!item.isPublished ? (
                             <ConfirmDelete
                               name={item.name}
                               onDelete={this.handleDeleteItem}
                               trigger={<Dropdown.Item text={t('global.delete')} />}
                             />
-                          </Dropdown.Menu>
-                        </Dropdown>
+                          ) : null}
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    ) : null}
 
-                        <Button primary compact onClick={this.handleEditItem}>
-                          {t('global.edit')}
-                        </Button>
-                      </>
-                    )}
+                    <Button primary compact onClick={this.handleEditItem}>
+                      {t('global.edit')}
+                    </Button>
                   </Row>
                 </Column>
               </Row>
@@ -110,9 +113,17 @@ export default class ItemDetailPage extends React.PureComponent<Props> {
               {data.category ? (
                 <Section>
                   <div className="subtitle">{t('item.category')}</div>
-                  <div className="value">{data.category}</div>
+                  <div className="value">{t(`wearable.category.${data.category}`)}</div>
                 </Section>
               ) : null}
+              <Section>
+                <div className="subtitle">{t('item.representation')}</div>
+                <div className="value">
+                  {getBodyShapes(item)
+                    .map(bodyShape => t(`body_shapes.${toBodyShapeType(bodyShape)}`))
+                    .join(', ')}
+                </div>
+              </Section>
               {item.rarity ? (
                 <Section>
                   <div className="subtitle">{t('item.rarity')}</div>

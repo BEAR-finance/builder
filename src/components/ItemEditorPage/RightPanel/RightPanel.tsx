@@ -1,106 +1,297 @@
 import * as React from 'react'
-import { Loader, Dropdown } from 'decentraland-ui'
+import equal from 'fast-deep-equal'
+import { utils } from 'decentraland-commons'
+import { Loader, Dropdown, Button } from 'decentraland-ui'
 import { t } from 'decentraland-dapps/dist/modules/translation/utils'
 import ItemImage from 'components/ItemImage'
 import ItemProvider from 'components/ItemProvider'
 import ConfirmDelete from 'components/ConfirmDelete'
+import Icon from 'components/Icon'
 import { isEqual } from 'lib/address'
-import { getMissingBodyShapeType, canManageItem } from 'modules/item/utils'
-import { Item, ItemRarity, ITEM_DESCRIPTION_MAX_LENGTH, ITEM_NAME_MAX_LENGTH, WearableCategory } from 'modules/item/types'
+import { getMissingBodyShapeType, canManageItem, getRarities, getWearableCategories, getOverridesCategories } from 'modules/item/utils'
+import { computeHashes } from 'modules/deployment/contentUtils'
+import { Item, ItemRarity, ITEM_DESCRIPTION_MAX_LENGTH, ITEM_NAME_MAX_LENGTH, THUMBNAIL_PATH, WearableCategory } from 'modules/item/types'
 import Collapsable from './Collapsable'
 import Input from './Input'
 import Select from './Select'
 import MultiSelect from './MultiSelect'
 import Tags from './Tags'
-import { Props } from './RightPanel.types'
+import { Props, State } from './RightPanel.types'
 import './RightPanel.css'
 
-export default class RightPanel extends React.PureComponent<Props> {
-  timeout: NodeJS.Timer | null = null
+export default class RightPanel extends React.PureComponent<Props, State> {
+  state: State = this.getInitialState()
+  thumbnailInput = React.createRef<HTMLInputElement>()
 
-  getSelectedItem = () => {
-    const { items, selectedItemId } = this.props
-    return items.find(item => item.id === selectedItemId) || null
+  componentDidMount() {
+    const { selectedItem } = this.props
+
+    if (selectedItem) {
+      this.setItem(selectedItem)
+    }
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    const { selectedItemId, selectedItem } = this.props
+
+    if (prevProps.selectedItemId !== selectedItemId) {
+      if (selectedItem) {
+        this.setItem(selectedItem)
+      } else {
+        this.setState(this.getInitialState())
+      }
+    } else if (!prevProps.selectedItem && selectedItem) {
+      this.setItem(selectedItem)
+    }
+  }
+
+  setItem(item: Item) {
+    this.setState({
+      name: item.name,
+      description: item.description,
+      rarity: item.rarity,
+      data: item.data,
+      hasItem: true,
+      isDirty: false
+    })
+  }
+
+  getInitialState(): State {
+    return {
+      name: '',
+      description: '',
+      thumbnail: '',
+      rarity: undefined,
+      contents: {},
+      data: undefined,
+      hasItem: false,
+      isDirty: false
+    }
   }
 
   handleDeleteItem = () => {
     const { onDeleteItem } = this.props
-    onDeleteItem(this.getSelectedItem()!)
+    const { selectedItem } = this.props
+    onDeleteItem(selectedItem!)
   }
 
   handleAddRepresentationToItem = () => {
-    const { onOpenModal } = this.props
-    onOpenModal('CreateItemModal', { addRepresentationTo: this.getSelectedItem()! })
+    const { selectedItem, onOpenModal } = this.props
+    onOpenModal('CreateItemModal', { item: selectedItem, addRepresentation: true })
   }
 
-  handleChange = (newItem: Item) => {
-    const { onSaveItem } = this.props
-    if (this.timeout) {
-      clearTimeout(this.timeout)
+  handleChangeItemFile = () => {
+    const { selectedItem, onOpenModal } = this.props
+    onOpenModal('CreateItemModal', { item: selectedItem, changeItemFile: true })
+  }
+
+  handleChangeName = (name: string) => {
+    this.setState({ name, isDirty: this.isDirty({ name }) })
+  }
+
+  handleChangeDescription = (description: string) => {
+    this.setState({ description, isDirty: this.isDirty({ description }) })
+  }
+
+  handleChangeRarity = (rarity: ItemRarity) => {
+    this.setState({ rarity, isDirty: this.isDirty({ rarity }) })
+  }
+
+  handleChangeCategory = (category: WearableCategory) => {
+    const data = {
+      ...this.state.data!,
+      category
     }
-    this.timeout = setTimeout(() => {
-      this.timeout = null
-      onSaveItem(newItem, {})
-    }, 500)
+    this.setState({ data, isDirty: this.isDirty({ data }) })
+  }
+
+  handleChangeReplaces = (replaces: WearableCategory[]) => {
+    const data = {
+      ...this.state.data!,
+      replaces,
+      representations: this.state.data!.representations.map(representation => ({
+        ...representation,
+        overrideReplaces: replaces
+      }))
+    }
+
+    this.setState({ data, isDirty: this.isDirty({ data }) })
+  }
+
+  handleChangeHides = (hides: WearableCategory[]) => {
+    const data = {
+      ...this.state.data!,
+      hides,
+      representations: this.state.data!.representations.map(representation => ({
+        ...representation,
+        overrideHides: hides
+      }))
+    }
+
+    this.setState({ data, isDirty: this.isDirty({ data }) })
+  }
+
+  handleChangeTags = (tags: string[]) => {
+    const data = {
+      ...this.state.data!,
+      tags
+    }
+
+    this.setState({ data, isDirty: this.isDirty({ data }) })
+  }
+
+  handleOnSaveItem = async () => {
+    const { selectedItem, onSaveItem, onSavePublishedItem } = this.props
+    const { name, description, rarity, contents, data, isDirty } = this.state
+
+    if (isDirty && selectedItem) {
+      const itemContents = {
+        ...selectedItem.contents,
+        ...(await computeHashes(contents))
+      }
+      const item: Item = {
+        ...selectedItem,
+        name,
+        description,
+        rarity,
+        data: data!,
+        contents: itemContents
+      }
+      const onSave = selectedItem && selectedItem.isPublished ? onSavePublishedItem : onSaveItem
+      onSave(item, contents)
+      this.setState({ isDirty: false })
+    }
+  }
+
+  handleOnResetItem = () => {
+    const { selectedItem } = this.props
+    if (selectedItem) {
+      this.setItem(selectedItem)
+    }
   }
 
   handleRemoveFromCollection = () => {
-    const { onSetCollection } = this.props
-    const item = this.getSelectedItem()
-    if (item) {
-      onSetCollection(item, null)
+    const { selectedItem, onSetCollection } = this.props
+    if (selectedItem) {
+      onSetCollection(selectedItem, null)
     }
   }
 
+  handleOpenThumbnailDialog = () => {
+    if (this.thumbnailInput.current) {
+      this.thumbnailInput.current.click()
+    }
+  }
+
+  handleThumbnailChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { files } = event.target
+
+    const MAX_THUMBNAIL_SIZE = 5000000
+
+    if (files && files.length > 0) {
+      const file = files[0]
+      if (file.size > MAX_THUMBNAIL_SIZE) {
+        alert(
+          t('asset_pack.edit_assetpack.errors.thumbnail_size', {
+            count: MAX_THUMBNAIL_SIZE
+          })
+        )
+        return
+      }
+      const thumbnail = URL.createObjectURL(file)
+
+      this.setState({
+        thumbnail,
+        contents: { [THUMBNAIL_PATH]: file },
+        isDirty: true
+      })
+    }
+  }
+
+  canEditItemMetadata(item: Item | null) {
+    const { collection, address = '' } = this.props
+    return (item && collection && canManageItem(collection, item, address)) || (!collection && this.isOwner(item))
+  }
+
+  isOwner(item: Item | null) {
+    const { address = '' } = this.props
+    return item && isEqual(item.owner, address)
+  }
+
+  isDirty(newState: Partial<State> = {}) {
+    const { hasItem } = this.state
+
+    const editableItemAttributes = ['name', 'description', 'rarity', 'data']
+    const stateItem = utils.pick<Item>({ ...this.state, ...newState }, editableItemAttributes)
+    const item = utils.pick(this.props.selectedItem!, editableItemAttributes)
+
+    return hasItem ? !equal(stateItem, item) : false
+  }
+
   render() {
-    const { collection, selectedItemId, address = '' } = this.props
-    const selectedItem = this.getSelectedItem()
-
-    const isOwner = selectedItem && isEqual(selectedItem.owner, address)
-
-    const canEditItemMetadata = selectedItem && (collection && canManageItem(collection, selectedItem, address)) || (!collection && isOwner)
-    const canEditItemRarity = selectedItem && !selectedItem.isPublished && isOwner
-
-    const categories = Object.values(WearableCategory)
-    const rarities = Object.values(ItemRarity)
+    const { selectedItemId } = this.props
+    const { name, description, thumbnail, rarity, data, isDirty, hasItem } = this.state
+    const rarities = getRarities()
 
     return (
       <div className="RightPanel">
         <ItemProvider id={selectedItemId}>
-          {(item, _collection, isLoading) =>
-            !item && isLoading ? (
+          {(item, _collection, isLoading) => {
+            const isOwner = this.isOwner(item)
+            const canEditItemMetadata = this.canEditItemMetadata(item)
+
+            const wearableCategories = item ? getWearableCategories(item.contents) : []
+            const overrideCategories = item ? getOverridesCategories(item.contents) : []
+            const isItemLoading = selectedItemId && (!item || !hasItem)
+
+            return isLoading || isItemLoading ? (
               <Loader size="massive" active />
             ) : (
               <>
                 <div className="header">
                   <div className="title">{t('item_editor.right_panel.properties')}</div>
-                  {isOwner && selectedItem && !selectedItem.isPublished ? (
+                  {isOwner && item && !item.isPublished ? (
                     <Dropdown trigger={<div className="actions" />} inline direction="left">
                       <Dropdown.Menu>
-                        {getMissingBodyShapeType(selectedItem) !== null ? (
+                        {getMissingBodyShapeType(item) !== null ? (
                           <Dropdown.Item
                             text={t('item_detail_page.add_representation', {
-                              bodyShape: t(`body_shapes.${getMissingBodyShapeType(selectedItem)}`).toLowerCase()
+                              bodyShape: t(`body_shapes.${getMissingBodyShapeType(item)}`).toLowerCase()
                             })}
                             onClick={this.handleAddRepresentationToItem}
                           />
                         ) : null}
-                        {item!.collectionId ? (
+                        {item.collectionId ? (
                           <Dropdown.Item text={t('collection_item.remove_from_collection')} onClick={this.handleRemoveFromCollection} />
                         ) : null}
-                        <ConfirmDelete
-                          name={selectedItem.name}
-                          onDelete={this.handleDeleteItem}
-                          trigger={<Dropdown.Item text={t('global.delete')} />}
-                        />
+                        <ConfirmDelete name={name} onDelete={this.handleDeleteItem} trigger={<Dropdown.Item text={t('global.delete')} />} />
                       </Dropdown.Menu>
                     </Dropdown>
                   ) : null}
                 </div>
-                <Collapsable item={selectedItem} label={t('item_editor.right_panel.details')}>
+                <Collapsable item={item} label={t('item_editor.right_panel.details')}>
                   {item => (
                     <div className="details">
-                      <ItemImage item={item} hasBadge={true} badgeSize="small" />
+                      {canEditItemMetadata ? (
+                        <>
+                          <Icon name="edit" className="edit-item-file" onClick={this.handleChangeItemFile} />
+                          <div className="thumbnail-container">
+                            <ItemImage item={item} src={thumbnail} hasBadge={true} badgeSize="small" />
+                            <div className="thumbnail-edit-container">
+                              <input
+                                type="file"
+                                ref={this.thumbnailInput}
+                                onChange={this.handleThumbnailChange}
+                                accept="image/png, image/jpeg"
+                              />
+                              <div className="thumbnail-edit-background"></div>
+                              <Icon name="camera" onClick={this.handleOpenThumbnailDialog} />
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <ItemImage item={item} src={thumbnail} hasBadge={true} badgeSize="small" />
+                      )}
                       <div className="metrics">
                         <div className="metric triangles">{t('model_metrics.triangles', { count: item.metrics.triangles })}</div>
                         <div className="metric materials">{t('model_metrics.materials', { count: item.metrics.materials })}</div>
@@ -109,103 +300,84 @@ export default class RightPanel extends React.PureComponent<Props> {
                     </div>
                   )}
                 </Collapsable>
-                <Collapsable item={selectedItem} label={t('item_editor.right_panel.basics')}>
+                <Collapsable item={item} label={t('item_editor.right_panel.basics')}>
                   {item => (
-                  <>
+                    <>
                       <Input
                         itemId={item.id}
                         label={t('global.name')}
-                        value={item.name}
+                        value={name}
                         disabled={!canEditItemMetadata}
                         maxLength={ITEM_NAME_MAX_LENGTH}
-                        onChange={name => this.handleChange({ ...item, name })}
+                        onChange={this.handleChangeName}
                       />
                       <Input
                         itemId={item.id}
                         label={t('global.description')}
-                        value={item.description}
+                        value={description}
                         disabled={!canEditItemMetadata}
                         maxLength={ITEM_DESCRIPTION_MAX_LENGTH}
-                        onChange={description => this.handleChange({ ...item, description })}
+                        onChange={this.handleChangeDescription}
                       />
                       <Select<WearableCategory>
                         itemId={item.id}
                         label={t('global.category')}
-                        value={item.data.category}
-                        options={categories.map(value => ({ value, text: t(`wearable.category.${value}`) }))}
+                        value={data!.category}
+                        options={wearableCategories.map(value => ({ value, text: t(`wearable.category.${value}`) }))}
                         disabled={!canEditItemMetadata}
-                        onChange={category => this.handleChange({ ...item, data: { ...item.data, category } })}
+                        onChange={this.handleChangeCategory}
                       />
                       <Select<ItemRarity>
                         itemId={item.id}
                         label={t('global.rarity')}
-                        value={item.rarity}
+                        value={rarity}
                         options={rarities.map(value => ({ value, text: t(`wearable.rarity.${value}`) }))}
-                        disabled={!canEditItemRarity}
-                        onChange={rarity => this.handleChange({ ...item, rarity })}
+                        disabled={item.isPublished || !canEditItemMetadata}
+                        onChange={this.handleChangeRarity}
                       />
                     </>
                   )}
                 </Collapsable>
-                <Collapsable item={selectedItem} label={t('item_editor.right_panel.overrides')}>
+                <Collapsable item={item} label={t('item_editor.right_panel.overrides')}>
                   {item => (
                     <>
                       <MultiSelect<WearableCategory>
                         itemId={item.id}
                         label={t('item_editor.right_panel.replaces')}
-                        value={item.data.replaces}
-                        options={categories.map(value => ({ value, text: t(`wearable.category.${value}`) }))}
+                        info={t('item_editor.right_panel.replaces_info')}
+                        value={data!.replaces}
+                        options={overrideCategories.map(value => ({ value, text: t(`wearable.category.${value}`) }))}
                         disabled={!canEditItemMetadata}
-                        onChange={replaces =>
-                          this.handleChange({
-                            ...item,
-                            data: {
-                              ...item.data,
-                              replaces,
-                              representations: item.data.representations.map(representation => ({
-                                ...representation,
-                                overrideReplaces: replaces
-                              }))
-                            }
-                          })
-                        }
+                        onChange={this.handleChangeReplaces}
                       />
                       <MultiSelect<WearableCategory>
                         itemId={item.id}
                         label={t('item_editor.right_panel.hides')}
-                        value={item.data.hides}
-                        options={categories.map(value => ({ value, text: t(`wearable.category.${value}`) }))}
+                        info={t('item_editor.right_panel.hides_info')}
+                        value={data!.hides}
+                        options={overrideCategories.map(value => ({ value, text: t(`wearable.category.${value}`) }))}
                         disabled={!canEditItemMetadata}
-                        onChange={hides =>
-                          this.handleChange({
-                            ...item,
-                            data: {
-                              ...item.data,
-                              hides,
-                              representations: item.data.representations.map(representation => ({
-                                ...representation,
-                                overrideHides: hides
-                              }))
-                            }
-                          })
-                        }
+                        onChange={this.handleChangeHides}
                       />
                     </>
                   )}
                 </Collapsable>
-                <Collapsable item={selectedItem} label={t('item_editor.right_panel.tags')}>
-                  {item => (
-                    <Tags
-                      itemId={item.id}
-                      value={item.data.tags}
-                      onChange={tags => this.handleChange({ ...item, data: { ...item.data, tags } })}
-                      isDisabled={!canEditItemMetadata}
-                    />
-                  )}
+                <Collapsable item={item} label={t('item_editor.right_panel.tags')}>
+                  {item => <Tags itemId={item.id} value={data!.tags} onChange={this.handleChangeTags} isDisabled={!canEditItemMetadata} />}
                 </Collapsable>
+                {isDirty ? (
+                  <div className="edit-buttons">
+                    <Button secondary onClick={this.handleOnResetItem}>
+                      {t('global.cancel')}
+                    </Button>
+                    <Button primary onClick={this.handleOnSaveItem}>
+                      {t('global.submit')}
+                    </Button>
+                  </div>
+                ) : null}
               </>
             )
-          }
+          }}
         </ItemProvider>
       </div>
     )

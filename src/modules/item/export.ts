@@ -1,30 +1,31 @@
-import { utils } from 'decentraland-commons'
 import { AuthIdentity } from 'dcl-crypto'
-import { getContentsStorageUrl } from 'lib/api/builder'
-import { saveItem } from 'modules/item/sagas'
-import { getCatalystPointer } from 'modules/item/utils'
-import { buildDeployData, deploy, makeContentFiles, EntityType } from 'modules/deployment/contentUtils'
+import { ChainId } from '@dcl/schemas'
+import { builder, getContentsStorageUrl } from 'lib/api/builder'
 import { PEER_URL } from 'lib/api/peer'
+import { getCatalystItemURN } from 'modules/item/utils'
+import { buildDeployData, deploy, makeContentFiles, EntityType } from 'modules/deployment/contentUtils'
 import { Collection } from 'modules/collection/types'
-import { IMAGE_PATH, Item } from './types'
+import { CatalystItem, Item, IMAGE_PATH, THUMBNAIL_PATH } from './types'
 import { generateImage } from './utils'
 
-export async function deployContents(identity: AuthIdentity, collection: Collection, item: Item) {
-  const pointer = getCatalystPointer(collection, item)
-  const files = await getFiles(item.contents)
-  const image = await generateImage(item)
+export async function deployContents(identity: AuthIdentity, collection: Collection, item: Item, chainId: ChainId) {
+  const urn = getCatalystItemURN(collection, item, chainId)
+  const [files, image] = await Promise.all([getFiles(item.contents), generateImage(item)])
   const contentFiles = await makeContentFiles({ ...files, [IMAGE_PATH]: image })
-  const metadata = { ...(utils.omit(item, ['contents']) as Omit<Item, 'contents'>), image: IMAGE_PATH }
-  const [data] = await buildDeployData(EntityType.WEARABLE, identity, [pointer], metadata, contentFiles)
+  const catalystItem = toCatalystItem(collection, item, chainId)
+  const [data] = await buildDeployData(EntityType.WEARABLE, identity, [urn], catalystItem, contentFiles)
+
   await deploy(PEER_URL, data)
 
   const newItem = { ...item, inCatalyst: true }
-  await saveItem(newItem)
+  if (!item.inCatalyst) {
+    await builder.saveItem(newItem, {})
+  }
 
   return newItem
 }
 
-async function getFiles(contents: Record<string, string>) {
+export async function getFiles(contents: Record<string, string>) {
   const promises = Object.keys(contents).map(path => {
     const url = getContentsStorageUrl(contents[path])
 
@@ -39,4 +40,28 @@ async function getFiles(contents: Record<string, string>) {
     files[file.path] = file.blob
     return files
   }, {})
+}
+
+function toCatalystItem(collection: Collection, item: Item, chainId: ChainId): CatalystItem {
+  return {
+    id: getCatalystItemURN(collection, item, chainId),
+    name: item.name,
+    description: item.description,
+    collectionAddress: collection.contractAddress!,
+    rarity: item.rarity,
+    i18n: [{ code: 'en', text: item.name }],
+    data: {
+      replaces: item.data.replaces,
+      hides: item.data.hides,
+      tags: item.data.tags,
+      representations: item.data.representations,
+      category: item.data.category
+    },
+    image: IMAGE_PATH,
+    thumbnail: THUMBNAIL_PATH,
+    contents: item.contents,
+    metrics: item.metrics,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  }
 }

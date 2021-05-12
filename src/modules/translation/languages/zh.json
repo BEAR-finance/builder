@@ -4,6 +4,12 @@
     "zoom_in": "放大",
     "zoom_out": "缩小"
   },
+  "authorization_modal": {
+    "title": "授权{token}",
+    "description": "欲继续操作，您需要授权{contract}合同代表您操作{token}令牌。只需执行一次.",
+    "authorize": "授权{contract_link}合约代表您操作{symbol}",
+    "pending_tx": "待处理的交易，请单击微调器以转到活动详细状态"
+  },
   "add_existing_item_modal": {
     "title": "添加现有项目",
     "subtitle": "选择一个不属于集合的项目"
@@ -109,7 +115,7 @@
     "top_banner_right": " "
   },
   "body_shapes": {
-    "unisex": "男女通用",
+    "both": "两个都",
     "male": "男",
     "female": "女"
   },
@@ -161,7 +167,8 @@
     "representation_label": "它代表哪种身材？",
     "existing_item": "这是现有项目的一部分吗？",
     "pick_item": "选择没有{bodyShape}的商品",
-    "adding_representation": "这将添加为以下项目的{body Shape}"
+    "adding_representation": "这将添加为以下项目的{body Shape}",
+    "change_item_file": "编辑制图表达"
   },
   "edit_collection_name_modal": {
     "title": "编辑集合名称",
@@ -347,10 +354,6 @@
       "use_as_alias": "用作别名"
     },
     "empty_names": "看来您没有任何名称。{br} {link}开始使用。",
-    "order": {
-      "name_asc": "名称 ↑",
-      "name_desc": "名称 ↓"
-    },
     "items": "{count}结果",
     "alias_popup": "您的个人资料正在使用此名称，但仍可以分配"
   },
@@ -393,6 +396,7 @@
     "items": "模型",
     "learn_more": "更多",
     "loading": "装载",
+    "mint": "铸币",
     "new": "新",
     "new_scene": "新场景",
     "delete": "删除",
@@ -428,13 +432,20 @@
     "category": "类别",
     "rarity": "稀有度",
     "published": "已发表",
-    "description": "描述"
+    "description": "描述",
+    "order": {
+      "newest": "最新",
+      "name_asc": "名称↑",
+      "name_desc": "名称↓"
+    },
+    "total": "全部的"
   },
   "navigation": {
     "scenes": "场景",
     "land": "土地",
-    "avatar": "头像",
-    "names": "名字"
+    "collections": "馆藏",
+    "names": "名字",
+    "curation": "策展"
   },
   "list": {
     "two": "{first} 及 {second}",
@@ -845,31 +856,59 @@
     "sign_in_required": "您需要{sign_in}才能访问此页面。",
     "sign_in": "登入"
   },
-  "avatar_page": {
+  "collections_page": {
     "results": "{count} {count，复数，一个{result}其他{results}}",
     "no_items": "有项目",
     "new_item": "项目",
     "new_collection": "收藏",
     "empty_description": "尚无项目或收藏集，开始创建它们并为metaverse装扮时尚"
   },
+  "curation_page": {
+    "filter": {
+      "all_status": "所有状态",
+      "approved": "已批准",
+      "rejected": "拒绝了"
+    },
+    "collections": "{count} {count,复数,一个{collection}其他{collections}}",
+    "empty_collections": "尚无要审查的收藏集。"
+  },
+  "collection_row": {
+    "items": "{count} {count，复数，一个{item}其他{items}}",
+    "owner": "所有者",
+    "visit": "访问",
+    "forum_post": "论坛帖子",
+    "no_forum_post": "尚未发布到论坛",
+    "approved": "已批准",
+    "rejected": "拒绝了"
+  },
   "item_detail_page": {
     "notice": "您需要先将项目添加到集合中，然后才能发布它们",
-    "add_representation": "添加{bodyShape}"
+    "add_representation": "添加{bodyShape}",
+    "change_item_file": "编辑制图表达"
   },
   "collection_detail_page": {
-    "new_item": "新项目",
-    "add_existing_item": "添加现有项目",
+    "new_item": "新物品",
     "mint_items": "薄荷项目",
-    "on_sale": "特价",
-    "on_sale_popup": "这将使您的收藏可以在自动售货机中出售。",
-    "notice": "发布",
-    "publish": "发布",
-    "managers": "合作者",
-    "click_here": "单击此处",
-    "start_adding_items": "看起来不错！现在您可以开始向收藏中添加项目了",
-    "cant_remove": "发布后，您将无法删除或向收藏夹添加项目",
+    "on_sale": "特价中",
     "set_on_sale_popup": "这样一来，您的收藏就可以在自动售货机上出售。",
-    "unset_on_sale_popup": "该系列可在世界上的自动售货机上购买。"
+    "unset_on_sale_popup": "此收藏集可以在世界上的自动售货机上购买。",
+    "publish": "发布",
+    "notice": "凉爽的！ 现在，您可以开始处理项目了。 {editor_link}打开编辑器，或在任何项目上单击“编辑”按钮。",
+    "click_here": "点击这里",
+    "start_adding_items": "看起来不错！ 现在您可以开始将项目添加到您的收藏中了。",
+    "cant_remove": "集合发布后，您将无法将其删除或添加到集合中。",
+    "cant_mint": "该收藏集仍在审核中，一旦该过程结束，您将能够铸造商品",
+    "under_review": "审核中"
+  },
+  "context_menu": {
+    "add_existing_item": "添加现有项目",
+    "forum_post": "论坛帖子",
+    "copy_address": "复制地址",
+    "unpublished": "该收藏集仍在审核中",
+    "managers": "合作者",
+    "post_to_forum": "发布到论坛",
+    "posting": "过帐",
+    "not_posted": "该收藏集尚未发布到论坛。 您可以在这里重试"
   },
   "collection_item": {
     "set_price": "设定价格",
@@ -883,6 +922,7 @@
   "item": {
     "category": "类别",
     "rarity": "稀有度",
+    "representation": "表示",
     "price": "价钱",
     "beneficiary": "受益人",
     "supply": "供应",
@@ -904,6 +944,7 @@
     "first_paragraph": "您将要发布您的收藏集，请注意以下几点：",
     "second_paragraph": "发布收藏集后，您将无法添加或删除项目",
     "third_paragraph": "您将能够在市场上看到您的商品，但是一旦DAO验证了馆藏，它们就可以出售了",
+    "items_breakdown_title": "您即将发布{items}个项目。 每个系列的MANA费用都由Decentraland DAO负责，用于通过赠款，活动和奖励来支持社区的发展。",
     "publish": "发布"
   },
   "sell_collection_modal": {
@@ -932,6 +973,28 @@
   },
   "item_editor": {
     "open": "打开编辑器",
+    "top_panel": {
+      "veredict_received": "判决书已收到",
+      "veredict_received_successfully": "我们已成功收到您的判决！",
+      "veredict_explanation": "你能告诉我们为什么吗？",
+      "go_to_forum": "请转到相关论坛讨论，并让创建者知道您的决定。",
+      "forum_link": "论坛链接",
+      "discussion": "讨论",
+      "keep_reviewing": "继续审核",
+      "back_to_curation": "回到策展",
+      "reject": {
+        "title": "拒绝收藏",
+        "subtitle": "我想还不够，是吧？",
+        "tx_pending": "等待拒绝交易确认",
+        "action": "拒绝"
+      },
+      "approve": {
+        "title": "批准收藏",
+        "subtitle": "如果您觉得此收藏符合Decentraland标准，请批准它！",
+        "tx_pending": "等待批准交易以确认",
+        "action": "批准"
+      }
+    },
     "left_panel": {
       "title": "我的物品",
       "actions": {
@@ -954,7 +1017,9 @@
       "basics": "基本",
       "overrides": "覆写",
       "replaces": "取代",
+      "replaces_info": "当用户装备您的物品时，您选择的类别中的其他任何物品都将被取消装备。 用户删除物品后必须重新装备它们。",
       "hides": "皮",
+      "hides_info": "当用户装备您的物品时，您选择的类别中的所有其他物品将保持装备状态，但不会被渲染。 用户仅会在删除您的商品后看到他们的其他商品。 ",
       "tags": "标签",
       "select_placeholder": "选择一个选项"
     }
@@ -969,6 +1034,11 @@
       "uncommon": "罕见",
       "common": "常见"
     },
+    "color": {
+      "skin": "肤色",
+      "eye": "眼睛的颜色",
+      "hair": "发色"
+    },
     "category": {
       "body_shape": "身材",
       "earring": "耳环",
@@ -979,6 +1049,7 @@
       "feet": "腿部",
       "hair": "头发",
       "hat": "帽子",
+      "head": "头",
       "helmet": "头盔",
       "lower_body": "下半身",
       "mask": "面具",

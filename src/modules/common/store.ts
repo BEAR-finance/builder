@@ -41,11 +41,11 @@ configureAnalytics({
 const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__
   ? // prettier-ignore
     (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({
-      stateSanitizer: (state: RootState) => {
-        const { scene: _, ...newState } = state
-        return newState
-      }
-    })
+    stateSanitizer: (state: RootState) => {
+      const { scene: _, ...newState } = state
+      return newState
+    }
+  })
   : compose
 
 const history = createBrowserHistory()

@@ -15,6 +15,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
     const { address, onSubmit } = this.props
     const { collectionName } = this.state
     if (collectionName) {
+      const now = Date.now()
       const collection: Collection = {
         id: uuid.v4(),
         name: collectionName,
@@ -23,8 +24,9 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
         isApproved: false,
         minters: [],
         managers: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now()
+        reviewedAt: now,
+        createdAt: now,
+        updatedAt: now
       }
       onSubmit(collection)
     }
@@ -55,7 +57,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
             ></Field>
           </ModalContent>
           <ModalActions>
-            <Button primary disabled={isDisabled} loading={isLoading} onClick={this.handleSubmit}>
+            <Button primary disabled={isDisabled} loading={isLoading}>
               {t('global.create')}
             </Button>
           </ModalActions>

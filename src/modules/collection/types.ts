@@ -12,17 +12,17 @@ export type Collection = {
   isApproved: boolean
   minters: string[]
   managers: string[]
+  forumLink?: string
+  reviewedAt: number
   createdAt: number
   updatedAt: number
 }
 
 export type InitializeItem = {
-  rarity: number
-  totalSupply: number
+  rarity: string
   price: BN
   beneficiary: Address
   metadata: string
-  contentHash: string
 }
 
 export type Mint = {

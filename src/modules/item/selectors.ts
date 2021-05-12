@@ -17,17 +17,26 @@ export const getItems = createSelector<RootState, ItemState['data'], string | un
   Object.values(itemData)
 )
 
+export const getItem = (state: RootState, itemId: string) => {
+  const items = getItems(state)
+  return items.find(item => item.id === itemId) || null
+}
+
 export const getWalletItems = createSelector<RootState, Item[], string | undefined, Item[]>(getItems, getAddress, (items, address) =>
   items.filter(item => address && isEqual(item.owner, address))
 )
 
-export const getAuthorizedItems = createSelector<RootState, Collection[], Item[], string | undefined, Item[]>(getAuthorizedCollections, getItems, getAddress, (collections, items, address) =>
-  items.filter(item => {
-    const collection = collections.filter(collection => collection.id === item.collectionId)[0]
-    return address && canSeeItem(collection, item, address)
-  })
+export const getAuthorizedItems = createSelector<RootState, Collection[], Item[], string | undefined, Item[]>(
+  getAuthorizedCollections,
+  getItems,
+  getAddress,
+  (collections, items, address) =>
+    items.filter(item => {
+      const collection = collections.filter(collection => collection.id === item.collectionId)[0]
+      return address && canSeeItem(collection, item, address)
+    })
 )
 
-export const getWalletOrphanItems = createSelector<RootState, Item[], Item[]>(getItems, items =>
+export const getWalletOrphanItems = createSelector<RootState, Item[], Item[]>(getAuthorizedItems, items =>
   items.filter(item => item.collectionId === undefined)
 )

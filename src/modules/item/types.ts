@@ -23,6 +23,7 @@ export enum WearableCategory {
   FEET = 'feet',
   HAIR = 'hair',
   HAT = 'hat',
+  HEAD = 'head',
   HELMET = 'helmet',
   LOWER_BODY = 'lower_body',
   MASK = 'mask',
@@ -35,18 +36,23 @@ export enum WearableCategory {
 export const BODY_SHAPE_CATEGORY = 'body_shape'
 
 export enum BodyShapeType {
-  UNISEX = 'unisex',
+  BOTH = 'both',
   MALE = 'male',
   FEMALE = 'female'
 }
 
 export enum WearableBodyShape {
-  MALE = 'dcl://base-avatars/BaseMale',
-  FEMALE = 'dcl://base-avatars/BaseFemale'
+  MALE = 'urn:decentraland:off-chain:base-avatars:BaseMale',
+  FEMALE = 'urn:decentraland:off-chain:base-avatars:BaseFemale'
+}
+
+export enum WearableBodyShapeType {
+  MALE = 'BaseMale',
+  FEMALE = 'BaseFemale'
 }
 
 export type WearableRepresentation = {
-  bodyShape: WearableBodyShape[]
+  bodyShapes: WearableBodyShape[]
   mainFile: string
   contents: string[]
   overrideReplaces: WearableCategory[]
@@ -91,30 +97,48 @@ export type WearableData = {
   tags: string[]
 }
 
-export type Item = {
+type BaseItem = {
   id: string // uuid
   name: string
   thumbnail: string
-  owner: string
   description: string
+  rarity?: ItemRarity
+  metrics: ModelMetrics
+  contents: Record<string, string>
+  createdAt: number
+  updatedAt: number
+}
+
+export type CatalystItem = BaseItem & {
+  i18n: { code: string; text: string }[]
+  data: WearableData
+  image: string
+  collectionAddress: string
+}
+
+export type Item = BaseItem & {
+  type: ItemType
+  owner: string
   collectionId?: string
   tokenId?: string
   price?: string
   beneficiary?: string
-  rarity?: ItemRarity
   totalSupply?: number
   isPublished: boolean
   isApproved: boolean
   inCatalyst: boolean
-  type: ItemType
   data: WearableData
-  contents: Record<string, string>
-  metrics: ModelMetrics
-  createdAt: number
-  updatedAt: number
+}
+
+export type Rarity = {
+  id: ItemRarity
+  name: ItemRarity
+  price: string
+  maxSupply: string
 }
 
 export const THUMBNAIL_PATH = 'thumbnail.png'
 export const IMAGE_PATH = 'image.png'
 export const ITEM_NAME_MAX_LENGTH = 32
 export const ITEM_DESCRIPTION_MAX_LENGTH = 64
+export const ITEM_EXTENSIONS = ['.zip', '.gltf', '.glb', '.png']

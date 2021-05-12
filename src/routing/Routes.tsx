@@ -23,6 +23,8 @@ import LandPage from 'components/LandPage'
 import LandDetailPage from 'components/LandDetailPage'
 import LandTransferPage from 'components/LandTransferPage'
 import LandEditPage from 'components/LandEditPage'
+import ENSListPage from 'components/ENSListPage'
+import ClaimENSPage from 'components/ClaimENSPage'
 import LandSelectENSPage from 'components/LandSelectENSPage'
 import LandAssignENSPage from 'components/LandAssignENSPage'
 import ENSSelectLandPage from 'components/ENSSelectLandPage'
@@ -30,12 +32,11 @@ import LandOperatorPage from 'components/LandOperatorPage'
 import ActivityPage from 'components/ActivityPage'
 import SettingsPage from 'components/SettingsPage'
 import SceneDetailPage from 'components/SceneDetailPage'
-import AvatarPage from 'components/AvatarPage'
+import CollectionsPage from 'components/CollectionsPage'
 import ItemDetailPage from 'components/ItemDetailPage'
 import CollectionDetailPage from 'components/CollectionDetailPage'
 import ItemEditorPage from 'components/ItemEditorPage'
-import ENSListPage from 'components/ENSListPage'
-import ClaimENSPage from 'components/ClaimENSPage'
+import CurationPage from 'components/CurationPage'
 
 import { Props, State } from './Routes.types'
 
@@ -120,10 +121,11 @@ export default class Routes extends React.Component<Props, State> {
               : null}
             {env.get('REACT_APP_FF_WEARABLES')
               ? [
-                  <Route exact key={1} path={locations.avatar()} component={AvatarPage} />,
+                  <Route exact key={1} path={locations.collections()} component={CollectionsPage} />,
                   <Route exact key={2} path={locations.itemDetail()} component={ItemDetailPage} />,
                   <Route exact key={3} path={locations.collectionDetail()} component={CollectionDetailPage} />,
-                  <Route exact key={4} path={locations.itemEditor()} component={ItemEditorPage} />
+                  <Route exact key={4} path={locations.itemEditor()} component={ItemEditorPage} />,
+                  <Route exact key={5} path={locations.curation()} component={CurationPage} />
                 ]
               : null}
             <Redirect to={locations.root()} />

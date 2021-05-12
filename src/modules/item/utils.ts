@@ -1,4 +1,6 @@
+import { ChainId, Network, getChainName } from '@dcl/schemas'
 import { utils } from 'decentraland-commons'
+import { getChainConfiguration } from 'decentraland-dapps/dist/lib/chainConfiguration'
 import future from 'fp-future'
 import { getContentsStorageUrl } from 'lib/api/builder'
 import { Collection } from 'modules/collection/types'
@@ -13,26 +15,34 @@ import {
   BodyShapeType,
   RARITY_MAX_SUPPLY,
   RARITY_COLOR_LIGHT,
-  RARITY_COLOR
+  RARITY_COLOR,
+  WearableCategory,
+  WearableBodyShapeType,
+  THUMBNAIL_PATH
 } from './types'
 
 export function getMaxSupply(item: Item) {
   return RARITY_MAX_SUPPLY[item.rarity!]
 }
 
-export function getCatalystPointer(collection: Collection, item: Item) {
+export function getCatalystItemURN(collection: Collection, item: Item, chainId: ChainId) {
   if (!collection.contractAddress || !item.tokenId) {
-    throw new Error('You need the collection and item to be published to get the catalyst entity id')
+    throw new Error('You need the collection and item to be published to get the catalyst urn')
   }
-  return `${collection.contractAddress}-${item.tokenId}`
+  const config = getChainConfiguration(chainId)
+  const chainName = getChainName(config.networkMapping[Network.MATIC])
+  if (!chainName) {
+    throw new Error(`Could not find a valid chain name for network ${Network.MATIC} on config ${JSON.stringify(config.networkMapping)}`)
+  }
+  return `urn:decentraland:${chainName.toLowerCase()}:collections-v2:${collection.contractAddress}:${item.tokenId}`
 }
 
-export function getBodyShapeType(item: Item) {
+export function getBodyShapeType(item: Item): BodyShapeType {
   const bodyShapes = getBodyShapes(item)
   const hasMale = bodyShapes.includes(WearableBodyShape.MALE)
   const hasFemale = bodyShapes.includes(WearableBodyShape.FEMALE)
   if (hasMale && hasFemale) {
-    return BodyShapeType.UNISEX
+    return BodyShapeType.BOTH
   } else if (hasMale) {
     return BodyShapeType.MALE
   } else if (hasFemale) {
@@ -45,7 +55,7 @@ export function getBodyShapeType(item: Item) {
 export function getBodyShapes(item: Item) {
   const bodyShapes = new Set<WearableBodyShape>()
   for (const representation of item.data.representations) {
-    for (const bodyShape of representation.bodyShape) {
+    for (const bodyShape of representation.bodyShapes) {
       bodyShapes.add(bodyShape)
     }
   }
@@ -65,7 +75,21 @@ export function getMissingBodyShapeType(item: Item) {
 }
 
 export function hasBodyShape(item: Item, bodyShape: WearableBodyShape) {
-  return item.data.representations.some(representation => representation.bodyShape.includes(bodyShape))
+  return item.data.representations.some(representation => representation.bodyShapes.includes(bodyShape))
+}
+
+export function toWearableBodyShapeType(wearableBodyShape: WearableBodyShape) {
+  // wearableBodyShape looks like "urn:decentraland:off-chain:base-avatars:BaseMale" and we just want the "BaseMale" part
+  return wearableBodyShape.split(':').pop() as WearableBodyShapeType
+}
+
+export function toBodyShapeType(wearableBodyShape: WearableBodyShape): BodyShapeType {
+  switch (wearableBodyShape) {
+    case WearableBodyShape.MALE:
+      return BodyShapeType.MALE
+    case WearableBodyShape.FEMALE:
+      return BodyShapeType.FEMALE
+  }
 }
 
 export function getRarityIndex(rarity: ItemRarity) {
@@ -78,6 +102,12 @@ export function getRarityIndex(rarity: ItemRarity) {
     [ItemRarity.MYTHIC]: 5,
     [ItemRarity.UNIQUE]: 6
   }[rarity]
+}
+
+export function getBackgroundStyle(rarity?: ItemRarity) {
+  return rarity
+    ? { backgroundImage: `radial-gradient(${RARITY_COLOR_LIGHT[rarity]}, ${RARITY_COLOR[rarity]})` }
+    : { backgroundColor: 'var(--secondary)' }
 }
 
 // Metadata looks like this:
@@ -94,10 +124,10 @@ export function getMetadata(item: Item) {
   switch (item.type) {
     case ItemType.WEARABLE: {
       const data = item.data as WearableData
-      const bodyShapes = getBodyShapes(item)
-      return `${version}:${type}:${item.name}:${item.description}:${data.category}:${bodyShapes
-        .map(bodyShape => bodyShape.split('/').pop()) // bodyShape is like "dcl://base-avatars/BaseMale" and we just want the "BaseMale" part
-        .join(',')}`
+      const bodyShapeTypes = getBodyShapes(item)
+        .map(toWearableBodyShapeType)
+        .join(',')
+      return `${version}:${type}:${item.name}:${item.description}:${data.category}:${bodyShapeTypes}`
     }
     default:
       return `${version}:${type}:${slug}`
@@ -113,8 +143,10 @@ export function toItemObject(items: Item[]) {
 
 export async function generateImage(item: Item, width = 1024, height = 1024) {
   // fetch thumbnail
-  const thumbnailUrl = getContentsStorageUrl(item.contents[item.thumbnail])
-  const thumbnail = await fetch(thumbnailUrl).then(response => response.blob())
+  const response = await fetch(getThumbnailURL(item))
+  if (!response.ok) throw new Error(`Error generating the image: ${response.statusText}`)
+
+  const thumbnail = await response.blob()
 
   // create canvas
   const canvas = document.createElement('canvas')
@@ -169,6 +201,7 @@ export function canMintItem(collection: Collection, item: Item, address?: string
   return (
     address &&
     item.isPublished &&
+    item.isApproved &&
     totalSupply < getMaxSupply(item) &&
     (isOwner(item, address) || canMintCollectionItems(collection, address))
   )
@@ -176,4 +209,54 @@ export function canMintItem(collection: Collection, item: Item, address?: string
 
 export function canManageItem(collection: Collection, item: Item, address: string) {
   return isOwner(item, address) || canManageCollectionItems(collection, address)
+}
+
+export function hasOnChainDataChanged(originalItem: Item, item: Item) {
+  return (
+    originalItem.name !== item.name ||
+    originalItem.description !== item.description ||
+    originalItem.data.category !== item.data.category ||
+    originalItem.price !== item.price ||
+    originalItem.beneficiary !== item.beneficiary ||
+    originalItem.rarity !== item.rarity
+  )
+}
+
+export function getThumbnailURL(item: Item) {
+  return getContentsStorageUrl(item.contents[item.thumbnail])
+}
+
+export function getRarities() {
+  return Object.values(ItemRarity)
+}
+
+function getCategories(contents: Record<string, any> | undefined = {}) {
+  const SIMPLE_WEARABLE_CATEGORIES = [WearableCategory.EYEBROWS, WearableCategory.EYES, WearableCategory.MOUTH]
+  const fileNames = Object.keys(contents)
+
+  return fileNames.some(isComplexFile)
+    ? Object.values(WearableCategory).filter(category => !SIMPLE_WEARABLE_CATEGORIES.includes(category))
+    : SIMPLE_WEARABLE_CATEGORIES
+}
+
+export function getWearableCategories(contents: Record<string, any> | undefined = {}) {
+  return getCategories(contents).filter(category => category !== WearableCategory.HEAD)
+}
+
+export function getOverridesCategories(contents: Record<string, any> | undefined = {}) {
+  return getCategories(contents)
+}
+
+export function isImageFile(fileName: string) {
+  return fileName.endsWith('.png')
+}
+
+export function isComplexFile(fileName: string) {
+  return fileName.endsWith('.gltf') || fileName.endsWith('.glb')
+}
+
+export function isModelPath(fileName: string) {
+  fileName = fileName.toLowerCase()
+  const isMask = fileName.includes('_mask')
+  return isComplexFile(fileName) || (fileName.indexOf(THUMBNAIL_PATH) === -1 && !isMask && isImageFile(fileName))
 }

@@ -12,10 +12,24 @@
   padding: 24px;
 }
 
-.CreateItemModal .preview .thumbnail {
+.CreateItemModal .preview .thumbnail-container {
+  position: relative;
+}
+
+.CreateItemModal .preview .thumbnail-container .thumbnail {
   width: 100%;
   background-color: var(--modal);
   border-radius: 8px;
+}
+
+.CreateItemModal .preview .thumbnail-container .Icon.camera {
+  position: absolute;
+  bottom: 16px;
+  right: 12px;
+}
+
+.CreateItemModal .preview .thumbnail-container input[type='file'] {
+  display: none;
 }
 
 .CreateItemModal .preview .metrics {
@@ -97,7 +111,7 @@
   background-color: var(--primary);
 }
 
-.CreateItemModal .option.has-icon.unisex {
+.CreateItemModal .option.has-icon.both {
   background-image: url(../../../images/unisex.svg);
 }
 
@@ -109,4 +123,17 @@
   background-image: url(../../../images/female.svg);
   background-size: 12px;
   background-position-x: 12px;
+}
+
+.CreateItemModal .dcl.field {
+  margin: 0;
+}
+
+.CreateItemModal .error {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.CreateItemModal .error p {
+  color: var(--primary);
 }

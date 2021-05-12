@@ -10,7 +10,7 @@ export const FETCH_COLLECTIONS_REQUEST = '[Request] Fetch Collections'
 export const FETCH_COLLECTIONS_SUCCESS = '[Success] Fetch Collections'
 export const FETCH_COLLECTIONS_FAILURE = '[Failure] Fetch Collections'
 
-export const fetchCollectionsRequest = () => action(FETCH_COLLECTIONS_REQUEST)
+export const fetchCollectionsRequest = (address?: string) => action(FETCH_COLLECTIONS_REQUEST, { address })
 export const fetchCollectionsSuccess = (collections: Collection[]) => action(FETCH_COLLECTIONS_SUCCESS, { collections })
 export const fetchCollectionsFailure = (error: string) => action(FETCH_COLLECTIONS_FAILURE, { error })
 
@@ -142,3 +142,39 @@ export const setCollectionManagersFailure = (collection: Collection, accessList:
 export type SetCollectionManagersRequestAction = ReturnType<typeof setCollectionManagersRequest>
 export type SetCollectionManagersSuccessAction = ReturnType<typeof setCollectionManagersSuccess>
 export type SetCollectionManagersFailureAction = ReturnType<typeof setCollectionManagersFailure>
+
+// Approve collection
+
+export const APPROVE_COLLECTION_REQUEST = '[Request] Approve collection'
+export const APPROVE_COLLECTION_SUCCESS = '[Success] Approve collection'
+export const APPROVE_COLLECTION_FAILURE = '[Failure] Approve collection'
+
+export const approveCollectionRequest = (collection: Collection) => action(APPROVE_COLLECTION_REQUEST, { collection })
+export const approveCollectionSuccess = (collection: Collection, chainId: ChainId, txHash: string) =>
+  action(APPROVE_COLLECTION_SUCCESS, {
+    collection,
+    ...buildTransactionPayload(chainId, txHash, { collection })
+  })
+export const approveCollectionFailure = (collection: Collection, error: string) => action(APPROVE_COLLECTION_FAILURE, { collection, error })
+
+export type ApproveCollectionRequestAction = ReturnType<typeof approveCollectionRequest>
+export type ApproveCollectionSuccessAction = ReturnType<typeof approveCollectionSuccess>
+export type ApproveCollectionFailureAction = ReturnType<typeof approveCollectionFailure>
+
+// Reject collection
+
+export const REJECT_COLLECTION_REQUEST = '[Request] Reject collection'
+export const REJECT_COLLECTION_SUCCESS = '[Success] Reject collection'
+export const REJECT_COLLECTION_FAILURE = '[Failure] Reject collection'
+
+export const rejectCollectionRequest = (collection: Collection) => action(REJECT_COLLECTION_REQUEST, { collection })
+export const rejectCollectionSuccess = (collection: Collection, chainId: ChainId, txHash: string) =>
+  action(REJECT_COLLECTION_SUCCESS, {
+    collection,
+    ...buildTransactionPayload(chainId, txHash, { collection })
+  })
+export const rejectCollectionFailure = (collection: Collection, error: string) => action(REJECT_COLLECTION_FAILURE, { collection, error })
+
+export type RejectCollectionRequestAction = ReturnType<typeof rejectCollectionRequest>
+export type RejectCollectionSuccessAction = ReturnType<typeof rejectCollectionSuccess>
+export type RejectCollectionFailureAction = ReturnType<typeof rejectCollectionFailure>

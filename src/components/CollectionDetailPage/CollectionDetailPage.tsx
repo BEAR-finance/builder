@@ -1,29 +1,29 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { Section, Row, Dropdown, Narrow, Column, Header, Button, Icon, Popup, Radio, CheckboxProps } from 'decentraland-ui'
-
+import { env } from 'decentraland-commons'
+import { Section, Row, Narrow, Column, Header, Button, Icon, Popup, Radio, CheckboxProps } from 'decentraland-ui'
+import { ContractName, getContract } from 'decentraland-transactions'
 import { t, T } from 'decentraland-dapps/dist/modules/translation/utils'
-
+import { Authorization, AuthorizationType } from 'decentraland-dapps/dist/modules/authorization/types'
+import { hasAuthorization } from 'decentraland-dapps/dist/modules/authorization/utils'
 import { locations } from 'routing/locations'
-import { canMintCollectionItems, isOnSale, isOwner } from 'modules/collection/utils'
+import { canMintCollectionItems, isOnSale as isCollectionOnSale, isOwner } from 'modules/collection/utils'
 import { isComplete } from 'modules/item/utils'
 import LoggedInDetailPage from 'components/LoggedInDetailPage'
-import ConfirmDelete from 'components/ConfirmDelete'
 import Notice from 'components/Notice'
 import NotFound from 'components/NotFound'
 import BuilderIcon from 'components/Icon'
 import Back from 'components/Back'
+import { AuthorizationModal } from 'components/AuthorizationModal'
+import ContextMenu from './ContextMenu'
 import CollectionItem from './CollectionItem'
-import { Props } from './CollectionDetailPage.types'
+import { Props, State } from './CollectionDetailPage.types'
 import './CollectionDetailPage.css'
 
 const STORAGE_KEY = 'dcl-collection-notice'
 
-export default class CollectionDetailPage extends React.PureComponent<Props> {
-  handleUpdateManagers = () => {
-    const { collection, onOpenModal } = this.props
-    onOpenModal('CollectionManagersModal', { collectionId: collection!.id })
-  }
+export default class CollectionDetailPage extends React.PureComponent<Props, State> {
+  state = { isAuthorizationModalOpen: false }
 
   handleMintItems = () => {
     const { collection, onOpenModal } = this.props
@@ -35,14 +35,16 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
     onOpenModal('CreateItemModal', { collectionId: collection!.id })
   }
 
-  handleDeleteItem = () => {
-    const { collection, onDelete } = this.props
-    onDelete(collection!)
-  }
-
   handlePublish = () => {
-    const { collection, onOpenModal } = this.props
-    onOpenModal('PublishCollectionModal', { collectionId: collection!.id })
+    const { authorizations, collection, onOpenModal } = this.props
+    let isAuthorizationModalOpen = false
+
+    if (hasAuthorization(authorizations, this.getAuthorization())) {
+      onOpenModal('PublishCollectionModal', { collectionId: collection!.id })
+    } else {
+      isAuthorizationModalOpen = true
+    }
+    this.setState({ isAuthorizationModalOpen })
   }
 
   handleEditName = () => {
@@ -60,9 +62,27 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
     }
   }
 
+  handleGoBack = () => {
+    this.props.onNavigate(locations.collections())
+  }
+
+  getAuthorization(): Authorization {
+    const { wallet } = this.props
+    const chainId = wallet.networks.MATIC.chainId
+    const tokenAddress = getContract(ContractName.MANAToken, chainId).address
+    const authorizedAddress = getContract(ContractName.CollectionManager, chainId).address
+    return {
+      type: AuthorizationType.ALLOWANCE,
+      address: wallet.address,
+      tokenAddress,
+      authorizedAddress,
+      chainId
+    }
+  }
+
   canPublish() {
     const { items } = this.props
-    return this.hasItems() && items.every(isComplete)
+    return env.get('REACT_APP_FF_WEARABLES_PUBLISH') && this.hasItems() && items.every(isComplete)
   }
 
   hasItems() {
@@ -71,16 +91,17 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
   }
 
   renderPage() {
-    const { ethAddress, items, isOnSaleLoading, onOpenModal, onNavigate } = this.props
+    const { wallet, items, isOnSaleLoading } = this.props
     const collection = this.props.collection!
 
-    const canMint = canMintCollectionItems(collection, ethAddress)
+    const canMint = canMintCollectionItems(collection, wallet.address)
+    const isOnSale = isCollectionOnSale(collection, wallet)
 
     return (
       <>
         <Section className={collection.isPublished ? 'is-published' : ''}>
           <Row>
-            <Back absolute onClick={() => onNavigate(locations.avatar())} />
+            <Back absolute onClick={this.handleGoBack} />
             <Narrow>
               <Row>
                 <Column className="header-column">
@@ -93,7 +114,7 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
                 </Column>
                 <Column align="right" shrink={false} grow={false}>
                   <Row className="actions">
-                    {isOwner(collection, ethAddress) ? (
+                    {isOwner(collection, wallet.address) ? (
                       <>
                         {collection.isPublished ? (
                           <>
@@ -101,7 +122,7 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
                               content={
                                 isOnSaleLoading
                                   ? t('global.loading')
-                                  : isOnSale(collection)
+                                  : isOnSale
                                   ? t('collection_detail_page.unset_on_sale_popup')
                                   : t('collection_detail_page.set_on_sale_popup')
                               }
@@ -110,7 +131,7 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
                                 <Radio
                                   toggle
                                   className="on-sale"
-                                  checked={isOnSale(collection)}
+                                  checked={isOnSale}
                                   onChange={this.handleOnSaleChange}
                                   label={t('collection_detail_page.on_sale')}
                                   disabled={isOnSaleLoading}
@@ -136,35 +157,7 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
                       </>
                     ) : null}
 
-                    {isOwner(collection, ethAddress) ? (
-                      <Dropdown
-                        trigger={
-                          <Button basic>
-                            <Icon name="ellipsis horizontal" />
-                          </Button>
-                        }
-                        inline
-                        direction="left"
-                      >
-                        <Dropdown.Menu>
-                          {collection.isPublished ? (
-                            <Dropdown.Item text={t('collection_detail_page.managers')} onClick={this.handleUpdateManagers} />
-                          ) : (
-                            <>
-                              <Dropdown.Item
-                                text={t('collection_detail_page.add_existing_item')}
-                                onClick={() => onOpenModal('AddExistingItemModal', { collectionId: collection!.id })}
-                              />
-                              <ConfirmDelete
-                                name={collection.name}
-                                onDelete={this.handleDeleteItem}
-                                trigger={<Dropdown.Item text={t('global.delete')} />}
-                              />
-                            </>
-                          )}
-                        </Dropdown.Menu>
-                      </Dropdown>
-                    ) : null}
+                    {isOwner(collection, wallet.address) ? <ContextMenu collection={collection} /> : null}
 
                     {collection.isPublished ? (
                       collection.isApproved ? (
@@ -230,7 +223,25 @@ export default class CollectionDetailPage extends React.PureComponent<Props> {
             </div>
           )}
         </Narrow>
+        {this.renderAuthorizationModal()}
       </>
+    )
+  }
+
+  handleCloseAuthorizationModal = () => {
+    this.setState({ isAuthorizationModalOpen: false })
+  }
+
+  renderAuthorizationModal() {
+    const { isAuthorizationModalOpen } = this.state
+
+    return (
+      <AuthorizationModal
+        open={isAuthorizationModalOpen}
+        authorization={this.getAuthorization()}
+        onProceed={this.handlePublish}
+        onCancel={this.handleCloseAuthorizationModal}
+      />
     )
   }
 

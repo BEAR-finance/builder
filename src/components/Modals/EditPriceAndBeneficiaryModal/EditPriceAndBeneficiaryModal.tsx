@@ -44,7 +44,7 @@ export default class EditPriceAndBeneficiaryModal extends React.PureComponent<Pr
     }
 
     if (item!.isPublished) {
-      onSavePublished(newItem)
+      onSavePublished(newItem, {})
     } else {
       onSave(newItem, {})
     }
@@ -91,7 +91,7 @@ export default class EditPriceAndBeneficiaryModal extends React.PureComponent<Pr
             />
           </ModalContent>
           <ModalActions>
-            <Button primary disabled={this.isDisabled()} loading={isLoading} onClick={this.handleSubmit}>
+            <Button primary disabled={this.isDisabled()} loading={isLoading}>
               {t('global.submit')}
             </Button>
           </ModalActions>

@@ -1,6 +1,14 @@
 import { LoadingState, loadingReducer } from 'decentraland-dapps/dist/modules/loading/reducer'
 import { FetchTransactionSuccessAction, FETCH_TRANSACTION_SUCCESS } from 'decentraland-dapps/dist/modules/transaction/actions'
 import {
+  CreateCollectionForumPostRequestAction,
+  CreateCollectionForumPostSuccessAction,
+  CreateCollectionForumPostFailureAction,
+  CREATE_COLLECTION_FORUM_POST_REQUEST,
+  CREATE_COLLECTION_FORUM_POST_SUCCESS,
+  CREATE_COLLECTION_FORUM_POST_FAILURE
+} from 'modules/forum/actions'
+import {
   FetchCollectionsRequestAction,
   FetchCollectionsSuccessAction,
   FetchCollectionsFailureAction,
@@ -13,6 +21,12 @@ import {
   DeleteCollectionRequestAction,
   DeleteCollectionSuccessAction,
   DeleteCollectionFailureAction,
+  PublishCollectionRequestAction,
+  PublishCollectionFailureAction,
+  ApproveCollectionRequestAction,
+  ApproveCollectionFailureAction,
+  RejectCollectionRequestAction,
+  RejectCollectionFailureAction,
   FETCH_COLLECTIONS_REQUEST,
   FETCH_COLLECTIONS_SUCCESS,
   FETCH_COLLECTIONS_FAILURE,
@@ -25,9 +39,33 @@ import {
   DELETE_COLLECTION_REQUEST,
   DELETE_COLLECTION_FAILURE,
   DELETE_COLLECTION_SUCCESS,
+  PUBLISH_COLLECTION_REQUEST,
+  PUBLISH_COLLECTION_FAILURE,
   PUBLISH_COLLECTION_SUCCESS,
+  APPROVE_COLLECTION_REQUEST,
+  APPROVE_COLLECTION_FAILURE,
+  APPROVE_COLLECTION_SUCCESS,
+  REJECT_COLLECTION_REQUEST,
+  REJECT_COLLECTION_FAILURE,
+  REJECT_COLLECTION_SUCCESS,
+  SET_COLLECTION_MINTERS_REQUEST,
   SET_COLLECTION_MINTERS_SUCCESS,
-  SET_COLLECTION_MANAGERS_SUCCESS
+  SET_COLLECTION_MINTERS_FAILURE,
+  SetCollectionMintersRequestAction,
+  SetCollectionMintersSuccessAction,
+  SetCollectionMintersFailureAction,
+  SET_COLLECTION_MANAGERS_REQUEST,
+  SET_COLLECTION_MANAGERS_SUCCESS,
+  SET_COLLECTION_MANAGERS_FAILURE,
+  SetCollectionManagersRequestAction,
+  SetCollectionManagersSuccessAction,
+  SetCollectionManagersFailureAction,
+  MINT_COLLECTION_ITEMS_REQUEST,
+  MINT_COLLECTION_ITEMS_SUCCESS,
+  MINT_COLLECTION_ITEMS_FAILURE,
+  MintCollectionItemsRequestAction,
+  MintCollectionItemsSuccessAction,
+  MintCollectionItemsFailureAction
 } from './actions'
 import { toCollectionObject } from './utils'
 import { Collection } from './types'
@@ -57,14 +95,42 @@ type CollectionReducerAction =
   | DeleteCollectionRequestAction
   | DeleteCollectionSuccessAction
   | DeleteCollectionFailureAction
+  | PublishCollectionRequestAction
+  | PublishCollectionFailureAction
+  | ApproveCollectionRequestAction
+  | ApproveCollectionFailureAction
+  | RejectCollectionRequestAction
+  | RejectCollectionFailureAction
   | FetchTransactionSuccessAction
+  | SetCollectionMintersRequestAction
+  | SetCollectionMintersSuccessAction
+  | SetCollectionMintersFailureAction
+  | SetCollectionManagersRequestAction
+  | SetCollectionManagersSuccessAction
+  | SetCollectionManagersFailureAction
+  | MintCollectionItemsRequestAction
+  | MintCollectionItemsSuccessAction
+  | MintCollectionItemsFailureAction
+  | CreateCollectionForumPostRequestAction
+  | CreateCollectionForumPostSuccessAction
+  | CreateCollectionForumPostFailureAction
 
 export function collectionReducer(state: CollectionState = INITIAL_STATE, action: CollectionReducerAction) {
   switch (action.type) {
     case FETCH_COLLECTIONS_REQUEST:
     case FETCH_COLLECTION_REQUEST:
+    case SAVE_COLLECTION_REQUEST:
     case DELETE_COLLECTION_REQUEST:
-    case SAVE_COLLECTION_REQUEST: {
+    case PUBLISH_COLLECTION_REQUEST:
+    case APPROVE_COLLECTION_REQUEST:
+    case REJECT_COLLECTION_REQUEST:
+    case SET_COLLECTION_MINTERS_REQUEST:
+    case SET_COLLECTION_MINTERS_SUCCESS:
+    case SET_COLLECTION_MANAGERS_REQUEST:
+    case SET_COLLECTION_MANAGERS_SUCCESS:
+    case MINT_COLLECTION_ITEMS_REQUEST:
+    case MINT_COLLECTION_ITEMS_SUCCESS:
+    case CREATE_COLLECTION_FORUM_POST_REQUEST: {
       return {
         ...state,
         loading: loadingReducer(state.loading, action)
@@ -108,10 +174,30 @@ export function collectionReducer(state: CollectionState = INITIAL_STATE, action
       delete newState.data[collection.id]
       return newState
     }
+    case CREATE_COLLECTION_FORUM_POST_SUCCESS: {
+      const { collection, forumLink } = action.payload
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          [collection.id]: {
+            ...state.data[collection.id],
+            forumLink
+          }
+        }
+      }
+    }
     case FETCH_COLLECTIONS_FAILURE:
     case FETCH_COLLECTION_FAILURE:
     case SAVE_COLLECTION_FAILURE:
-    case DELETE_COLLECTION_FAILURE: {
+    case DELETE_COLLECTION_FAILURE:
+    case PUBLISH_COLLECTION_FAILURE:
+    case APPROVE_COLLECTION_FAILURE:
+    case REJECT_COLLECTION_FAILURE:
+    case SET_COLLECTION_MINTERS_FAILURE:
+    case SET_COLLECTION_MANAGERS_FAILURE:
+    case MINT_COLLECTION_ITEMS_FAILURE:
+    case CREATE_COLLECTION_FORUM_POST_FAILURE: {
       return {
         ...state,
         loading: loadingReducer(state.loading, action),
@@ -126,11 +212,42 @@ export function collectionReducer(state: CollectionState = INITIAL_STATE, action
           const { collection } = transaction.payload
           return {
             ...state,
+            loading: loadingReducer(state.loading, action),
             data: {
               ...state.data,
               [collection.id]: {
                 ...state.data[collection.id],
                 isPublished: true
+              }
+            }
+          }
+        }
+        case APPROVE_COLLECTION_SUCCESS: {
+          const { collection } = transaction.payload
+          return {
+            ...state,
+            loading: loadingReducer(state.loading, { type: transaction.actionType }),
+            data: {
+              ...state.data,
+              [collection.id]: {
+                ...state.data[collection.id],
+                reviewedAt: new Date(),
+                isApproved: true
+              }
+            }
+          }
+        }
+        case REJECT_COLLECTION_SUCCESS: {
+          const { collection } = transaction.payload
+          return {
+            ...state,
+            loading: loadingReducer(state.loading, { type: transaction.actionType }),
+            data: {
+              ...state.data,
+              [collection.id]: {
+                ...state.data[collection.id],
+                reviewedAt: new Date(),
+                isApproved: false
               }
             }
           }

@@ -4,6 +4,12 @@
     "zoom_in": "Zoom in",
     "zoom_out": "Zoom out"
   },
+  "authorization_modal": {
+    "title": "Authorize {token}",
+    "description": "In order to continue you will need to authorize the {contract} contract to operate {token} tokens on your behalf. This only has to be done once.",
+    "authorize": "Authorize the {contract_link} contract to operate {symbol} on your behalf",
+    "pending_tx": "Transaction pending, click the spinner to go to your activity for a detailed status"
+  },
   "add_existing_item_modal": {
     "title": "Add Existing Item",
     "subtitle": "Select an item that is not part of a collection yet"
@@ -114,7 +120,7 @@
     "top_banner_right": " "
   },
   "body_shapes": {
-    "unisex": "Unisex",
+    "both": "Both",
     "male": "Male",
     "female": "Female",
     "null": "None"
@@ -159,7 +165,7 @@
   "create_item_modal": {
     "title": "New Item",
     "add_representation": "Add {bodyShape} Repesentation",
-    "name_label": "Add a name to your new item",
+    "name_label": "Add a name to your item",
     "category_label": "What's the category of this item?",
     "category_placeholder": "Select a category",
     "rarity_label": "How rare is this item?",
@@ -167,7 +173,8 @@
     "representation_label": "Which body shape does it represent?",
     "existing_item": "Is this part of an existing item?",
     "pick_item": "Pick an item that doesn't have a {bodyShape}",
-    "adding_representation": "This will be added as {bodyShape} for the following item"
+    "adding_representation": "This will be added as {bodyShape} for the following item",
+    "change_item_file": "Edit representation"
   },
   "edit_collection_name_modal": {
     "title": "Edit Collection Name",
@@ -346,10 +353,6 @@
       "use_as_alias": "Use as Alias"
     },
     "empty_names": "It looks like you don't have any Names.{br} {link} to get started.",
-    "order": {
-      "name_asc": "Name ↑",
-      "name_desc": "Name ↓"
-    },
     "items": "{count} {count, plural, one {result} other {results}}",
     "alias_popup": "This name is being used by your profile but it can still be assigned"
   },
@@ -401,6 +404,7 @@
     "items": "items",
     "learn_more": "Learn more",
     "loading": "Loading",
+    "mint": "Mint",
     "new": "New",
     "new_scene": "New scene",
     "delete": "Delete",
@@ -437,13 +441,20 @@
     "category": "Category",
     "rarity": "Rarity",
     "published": "Published",
-    "description": "Description"
+    "description": "Description",
+    "order": {
+      "newest": "Newest",
+      "name_asc": "Name ↑",
+      "name_desc": "Name ↓"
+    },
+    "total": "Total"
   },
   "navigation": {
     "scenes": "Scenes",
     "land": "Land",
-    "avatar": "Wearables",
-    "names": "Names"
+    "collections": "Collections",
+    "names": "Names",
+    "curation": "Curation"
   },
   "list": {
     "two": "{first} and {second}",
@@ -856,33 +867,59 @@
     "connect_error": "Could not connect wallet",
     "title": "Connect your wallet to sign in."
   },
-  "avatar_page": {
+  "collections_page": {
     "results": "{count} {count, plural, one {result} other {results}}",
     "no_items": "No items",
     "new_item": "New Item",
     "new_collection": "New Collection",
     "empty_description": "You have no Items or Collections yet, start creating them and dress the metaverse with style"
   },
+  "curation_page": {
+    "filter": {
+      "all_status": "All status",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "collections": "{count} {count, plural, one {collection} other {collections}}",
+    "empty_collections": "There are no collections to review yet."
+  },
+  "collection_row": {
+    "items": "{count} {count, plural, one {item} other {items}}",
+    "owner": "Owner",
+    "visit": "Visit",
+    "forum_post": "Forum Post",
+    "no_forum_post": "Not posted",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
   "item_detail_page": {
     "notice": "You need to add your items to a collection before you can publish them",
     "add_representation": "Add {bodyShape} representation",
-    "published": "Published"
+    "change_item_file": "Edit representation"
   },
   "collection_detail_page": {
     "new_item": "New Item",
-    "add_existing_item": "Add Existing Item",
     "mint_items": "Mint Items",
     "on_sale": "On sale",
     "set_on_sale_popup": "This will allow your collection to be sold on in-world vending machines.",
     "unset_on_sale_popup": "This collection is available for purchase on in-world vending machines.",
     "publish": "Publish",
-    "managers": "Collaborators",
     "notice": "Cool! Now you can start working on your items. {editor_link} to open the editor or click the edit button on any item.",
     "click_here": "Click here",
     "start_adding_items": "Looking good! now you can start adding items to your collection.",
     "cant_remove": "You will not be able to remove or add items to your collection once its published.",
     "cant_mint": "This collection is still under review, once that process ends you'll be able to mint items",
     "under_review": "Under Review"
+  },
+  "context_menu": {
+    "add_existing_item": "Add Existing Item",
+    "forum_post": "Forum post",
+    "copy_address": "Copy address",
+    "unpublished": "This collection is still under review",
+    "managers": "Collaborators",
+    "post_to_forum": "Post to forum",
+    "posting": "Posting",
+    "not_posted": "The collection wasn't posted to the forum. You can retry here"
   },
   "collection_item": {
     "set_price": "set price",
@@ -896,6 +933,7 @@
   "item": {
     "category": "Category",
     "rarity": "Rarity",
+    "representation": "Representation",
     "price": "Price",
     "beneficiary": "Beneficiary",
     "supply": "Supply",
@@ -917,6 +955,7 @@
     "first_paragraph": "You are about to publish your collection, keep in mind the following things:",
     "second_paragraph": "You will not be able to add or delete items after you publish your collection",
     "third_paragraph": "You will be able to see your items in the marketplace but they will available for sale once the collection is validated by the DAO",
+    "items_breakdown_title": "You are about to publish {items} items. The MANA fee for each collection goes to the Decentraland DAO, where it is used to support the growth of the community through grants, events, and prizes.",
     "publish": "Publish"
   },
   "mint_items_modal": {
@@ -945,6 +984,28 @@
   },
   "item_editor": {
     "open": "Open editor",
+    "top_panel": {
+      "veredict_received": "Verdict received",
+      "veredict_received_successfully": "We received your verdict successfully!",
+      "veredict_explanation": "Can you tell us why?",
+      "go_to_forum": "Please go to related forum discussion and let the creator know your decision.",
+      "forum_link": "Forum link",
+      "discussion": "Discussion",
+      "keep_reviewing": "Keep reviewing",
+      "back_to_curation": "Back to curation",
+      "reject": {
+        "title": "Reject Collection",
+        "subtitle": "I guess it's just not good enough, huh?",
+        "tx_pending": "Waiting for reject transaction to confirm",
+        "action": "Reject"
+      },
+      "approve": {
+        "title": "Approve Collection",
+        "subtitle": "If you feel this collection its up to Decentraland standards, approve it!",
+        "tx_pending": "Waiting for approve transaction to confirm",
+        "action": "Approve"
+      }
+    },
     "left_panel": {
       "title": "My Items",
       "actions": {
@@ -967,7 +1028,9 @@
       "basics": "Basics",
       "overrides": "Overrides",
       "replaces": "Replaces",
+      "replaces_info": "When a user equips your item, any other items in the category you select will be unequipped. Users must reequip them after removing your item.",
       "hides": "Hides",
+      "hides_info": "When a user equips your item, any other items in the category you select will stay equipped, but they won't be rendered. Users will only see their other items reappear after removing your item.",
       "tags": "Tags",
       "select_placeholder": "Select an option"
     }
@@ -982,6 +1045,11 @@
       "uncommon": "Uncommon",
       "common": "Common"
     },
+    "color": {
+      "skin": "Skin color",
+      "eye": "Eye color",
+      "hair": "Hair color"
+    },
     "category": {
       "body_shape": "Body Shape",
       "earring": "Earring",
@@ -992,6 +1060,7 @@
       "feet": "Feet",
       "hair": "Hair",
       "hat": "Hat",
+      "head": "Head",
       "helmet": "Helmet",
       "lower_body": "Lower Body",
       "mask": "Mask",

@@ -1,5 +1,6 @@
 import { all } from 'redux-saga/effects'
 
+import { authorizationSaga } from 'decentraland-dapps/dist/modules/authorization/sagas'
 import { transactionSaga } from 'decentraland-dapps/dist/modules/transaction/sagas'
 import { createProfileSaga } from 'decentraland-dapps/dist/modules/profile/sagas'
 
@@ -24,8 +25,10 @@ import { identitySaga } from 'modules/identity/sagas'
 import { landSaga } from 'modules/land/sagas'
 import { ensSaga } from 'modules/ens/sagas'
 import { tileSaga } from 'modules/tile/sagas'
-import { itemSaga } from 'modules/item/sagas'
 import { collectionSaga } from 'modules/collection/sagas'
+import { committeeSaga } from 'modules/committee/sagas'
+import { forumSaga } from 'modules/forum/sagas'
+import { itemSaga } from 'modules/item/sagas'
 import { statsSaga } from 'modules/stats/sagas'
 
 import { PEER_URL } from 'lib/api/peer'
@@ -38,6 +41,7 @@ export function* rootSaga() {
     transactionSaga(),
     translationSaga(),
     walletSaga(),
+    authorizationSaga(),
     assetPackSaga(),
     modalSaga(),
     sceneSaga(),
@@ -56,8 +60,10 @@ export function* rootSaga() {
     identitySaga(),
     landSaga(),
     tileSaga(),
-    itemSaga(),
     collectionSaga(),
+    committeeSaga(),
+    forumSaga(),
+    itemSaga(),
     ensSaga(),
     statsSaga()
   ])

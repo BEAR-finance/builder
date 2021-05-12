@@ -12,11 +12,12 @@ import { dataURLToBlob, isDataUrl, objectURLToBlob } from 'modules/media/utils'
 import { createManifest } from 'modules/project/export'
 import { PoolGroup } from 'modules/poolGroup/types'
 import { Pool } from 'modules/pool/types'
-import { Item, ItemType, ItemRarity, WearableData } from 'modules/item/types'
+import { Item, ItemType, ItemRarity, WearableData, Rarity } from 'modules/item/types'
 import { Collection } from 'modules/collection/types'
 import { PreviewType } from 'modules/editor/types'
 import { WeeklyStats } from 'modules/stats/types'
 import { authorize } from './auth'
+import { ForumPost } from 'modules/forum/types'
 
 export const BUILDER_SERVER_URL = env.get('REACT_APP_BUILDER_SERVER_URL', '')
 
@@ -57,6 +58,8 @@ export type RemoteCollection = {
   is_approved: boolean
   minters: string[]
   managers: string[]
+  forum_link?: string
+  reviewed_at: Date
   created_at: Date
   updated_at: Date
 }
@@ -320,12 +323,14 @@ function toRemoteCollection(collection: Collection): RemoteCollection {
     id: collection.id,
     name: collection.name,
     eth_address: collection.owner,
+    salt: collection.salt || null,
+    contract_address: collection.contractAddress || null,
     is_published: collection.isPublished,
     is_approved: collection.isApproved,
     minters: collection.minters,
     managers: collection.managers,
-    contract_address: collection.contractAddress || null,
-    salt: collection.salt || null,
+    forum_link: collection.forumLink,
+    reviewed_at: new Date(collection.reviewedAt),
     created_at: new Date(collection.createdAt),
     updated_at: new Date(collection.updatedAt)
   }
@@ -342,6 +347,8 @@ function fromRemoteCollection(remoteCollection: RemoteCollection) {
     isApproved: remoteCollection.is_approved,
     minters: remoteCollection.minters || [],
     managers: remoteCollection.managers || [],
+    forumLink: remoteCollection.forum_link,
+    reviewedAt: +new Date(remoteCollection.reviewed_at),
     createdAt: +new Date(remoteCollection.created_at),
     updatedAt: +new Date(remoteCollection.updated_at)
   }
@@ -556,8 +563,8 @@ export class BuilderAPI extends BaseAPI {
     return this.request(method, `/pools/${pool}/likes`)
   }
 
-  async fetchItems() {
-    const remoteItems: RemoteItem[] = await this.request('get', `/items`)
+  async fetchItems(address?: string) {
+    const remoteItems: RemoteItem[] = address ? await this.request('get', `/${address}/items`) : await this.request('get', `/items`)
     return remoteItems.map(fromRemoteItem)
   }
 
@@ -573,14 +580,17 @@ export class BuilderAPI extends BaseAPI {
 
   async saveItem(item: Item, contents: Record<string, Blob>) {
     await this.request('put', `/items/${item.id}`, { item: toRemoteItem(item) })
+    await this.saveItemContents(item, contents)
+  }
 
+  async saveItemContents(item: Item, contents: Record<string, Blob>) {
     if (Object.keys(contents).length > 0) {
       const formData = new FormData()
       for (let path in contents) {
         formData.append(item.contents[path], contents[path])
       }
 
-      await this.request('post', `/items/${item.id}/files`, formData)
+      return this.request('post', `/items/${item.id}/files`, formData)
     }
   }
 
@@ -588,14 +598,12 @@ export class BuilderAPI extends BaseAPI {
     await this.request('delete', `/items/${item.id}`, {})
   }
 
-  async fetchCollections() {
-    const remoteCollections: RemoteCollection[] = await this.request('get', `/collections`)
-    const collections: Collection[] = []
-    for (const remoteCollection of remoteCollections) {
-      const collection = fromRemoteCollection(remoteCollection)
-      collections.push(collection)
-    }
-    return collections
+  async fetchCollections(address?: string) {
+    const remoteCollections: RemoteCollection[] = address
+      ? await this.request('get', `/${address}/collections`)
+      : await this.request('get', `/collections`)
+
+    return remoteCollections.map(fromRemoteCollection)
   }
 
   async fetchCollection(id: string) {
@@ -603,8 +611,11 @@ export class BuilderAPI extends BaseAPI {
     return fromRemoteCollection(remoteCollection)
   }
 
-  async saveCollection(collection: Collection) {
-    const remoteCollection = await this.request('put', `/collections/${collection.id}`, { collection: toRemoteCollection(collection) })
+  async saveCollection(collection: Collection, data: string) {
+    const remoteCollection = await this.request('put', `/collections/${collection.id}`, {
+      collection: toRemoteCollection(collection),
+      data
+    })
     return fromRemoteCollection(remoteCollection)
   }
 
@@ -612,9 +623,21 @@ export class BuilderAPI extends BaseAPI {
     await this.request('delete', `/collections/${collection.id}`, {})
   }
 
-  async getWeeklyStats(base: string) {
+  async fetchWeeklyStats(base: string) {
     const remoteStats: RemoteWeeklyStats = await this.request('get', `/analytics/weekly?base=${base}`)
     return fromRemoteWeeklyStats(remoteStats)
+  }
+
+  async fetchCommittee(): Promise<string[]> {
+    return this.request('get', '/committee')
+  }
+
+  async createCollectionForumPost(collection: Collection, forumPost: ForumPost): Promise<string> {
+    return this.request('post', `/collections/${collection.id}/post`, { forumPost })
+  }
+
+  async fetchRarities(): Promise<Rarity[]> {
+    return this.request('get', '/rarities')
   }
 }
 

@@ -7,6 +7,7 @@ import { transactionReducer as transaction } from 'decentraland-dapps/dist/modul
 import { walletReducer as wallet } from 'decentraland-dapps/dist/modules/wallet/reducer'
 import { modalReducer as modal } from 'decentraland-dapps/dist/modules/modal/reducer'
 import { profileReducer as profile } from 'decentraland-dapps/dist/modules/profile/reducer'
+import { authorizationReducer as authorization } from 'decentraland-dapps/dist/modules/authorization/reducer'
 
 import { RootState } from 'modules/common/types'
 import { assetPackReducer as assetPack } from 'modules/assetPack/reducer'
@@ -24,8 +25,9 @@ import { identityReducer as identity } from 'modules/identity/reducer'
 import { landReducer as land } from 'modules/land/reducer'
 import { ensReducer as ens } from 'modules/ens/reducer'
 import { tileReducer as tile } from 'modules/tile/reducer'
-import { itemReducer as item } from 'modules/item/reducer'
+import { committeeReducer as committee } from 'modules/committee/reducer'
 import { collectionReducer as collection } from 'modules/collection/reducer'
+import { itemReducer as item } from 'modules/item/reducer'
 import { locationReducer as location } from 'modules/location/reducer'
 import { statsReducer as stats } from 'modules/stats/reducer'
 
@@ -37,6 +39,7 @@ export function createRootReducer(history: History) {
       translation,
       transaction,
       wallet,
+      authorization,
       modal,
       assetPack,
       asset,
@@ -53,8 +56,9 @@ export function createRootReducer(history: History) {
       land,
       ens,
       tile,
-      item,
+      committee,
       collection,
+      item,
       location,
       stats,
       router: connectRouter(history)

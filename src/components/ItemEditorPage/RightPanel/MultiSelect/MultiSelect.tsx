@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Dropdown, DropdownProps } from 'decentraland-ui'
+import { Dropdown, DropdownProps, Popup } from 'decentraland-ui'
 import { t } from 'decentraland-dapps/dist/modules/translation/utils'
 import { Props, State } from './MultiSelect.types'
 import './MultiSelect.css'
@@ -14,18 +14,27 @@ export default class MultiSelect<T extends string> extends React.PureComponent<P
   }
 
   componentWillReceiveProps(newProps: Props<T>) {
-    if (newProps.itemId !== this.props.itemId) {
-      this.setState({ value: newProps.value })
+    const { itemId, value } = newProps
+    if (itemId !== this.props.itemId || value !== this.state.value) {
+      this.setState({ value })
     }
   }
 
   handleChange = (_event: React.SyntheticEvent<HTMLElement, Event>, props: DropdownProps) => {
     const { onChange } = this.props
     const { value } = this.state
-    if (!value.includes(props.value as T)) {
-      const newValue = [...this.state.value, props.value as T]
-      this.setState({ value: newValue })
-      onChange(newValue)
+    const changeValues = props.value as T[]
+    const newValues = [...value]
+
+    for (const changedValue of changeValues) {
+      if (!value.includes(changedValue)) {
+        newValues.push(changedValue)
+      }
+    }
+
+    if (newValues.length !== value.length) {
+      this.setState({ value: newValues })
+      onChange(newValues)
     }
   }
 
@@ -37,7 +46,7 @@ export default class MultiSelect<T extends string> extends React.PureComponent<P
   }
 
   renderTrigger() {
-    const { label, options } = this.props
+    const { label, info, options } = this.props
     const { value } = this.state
     const labels = options.reduce((obj, option) => {
       obj[option.value] = option.text
@@ -46,7 +55,12 @@ export default class MultiSelect<T extends string> extends React.PureComponent<P
 
     return (
       <>
-        <div className="label">{label}</div>
+        <div className="label">
+          {label}
+          {info ? (
+            <Popup className="info-popup" content={info} position="top center" trigger={<i className="info" />} on="hover" inverted />
+          ) : null}
+        </div>
         <div className="values">
           {value.length > 0 ? (
             value.map(value => (
@@ -57,9 +71,6 @@ export default class MultiSelect<T extends string> extends React.PureComponent<P
                   onClick={event => {
                     this.handleRemove(value)
                     event.stopPropagation()
-                    event.nativeEvent.stopPropagation()
-                    event.preventDefault()
-                    event.nativeEvent.preventDefault()
                   }}
                 />
               </div>
@@ -78,14 +89,17 @@ export default class MultiSelect<T extends string> extends React.PureComponent<P
     const { value } = this.state
     return (
       <Dropdown
+        inline
+        multiple
         className={`MultiSelect ${value.length > 0 ? '' : 'blank'}`.trim()}
         trigger={this.renderTrigger()}
-        inline
         direction="right"
-        scrolling={options.length > 4}
+        value={value}
+        scrolling={false}
         options={options.filter(option => !value.includes(option.value))}
         disabled={disabled}
         onChange={this.handleChange}
+        closeOnChange={true}
       />
     )
   }
