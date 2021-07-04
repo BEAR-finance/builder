@@ -83,7 +83,7 @@ export class ControllerEntityFactory {
   }
 }
 
-export async function computeHashes(contents: Record<string, Blob>) {
+export async function computeHashes(contents: Record<string, Blob>): Promise<Record<string, string>> {
   const contentsAsHashes: Record<string, string> = {}
   for (const path in contents) {
     const blob = contents[path]
@@ -112,13 +112,14 @@ export async function buildDeployData(
   pointers: Pointer[],
   metadata: any,
   files: ContentFile[] = [],
+  timestampDelta: number = 0,
   afterEntity?: ControllerEntity
 ): Promise<[DeployData, ControllerEntity]> {
   const content: Map<ContentFilePath, ContentFileHash> = await calculateHashes(files)
   const [entity, entityFile] = await buildControllerEntityAndFile(
     type,
     pointers,
-    (afterEntity ? afterEntity.timestamp : Date.now()) + 1,
+    (afterEntity ? afterEntity.timestamp : Date.now()) + timestampDelta,
     content,
     metadata
   )
@@ -180,6 +181,11 @@ export async function deploy(contentServerUrl: string, data: DeployData) {
   }
 
   const deployResponse = await fetch(`${contentServerUrl}/content/entities`, { method: 'POST', body: form })
+  if (!deployResponse.ok) {
+    const blob = await deployResponse.blob()
+    const message = await blob.text()
+    throw new Error(message)
+  }
   const { creationTimestamp } = await deployResponse.json()
   return creationTimestamp
 }

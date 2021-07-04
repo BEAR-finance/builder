@@ -3,11 +3,13 @@ import { EditorScene, UnityKeyboardEvent } from 'modules/editor/types'
 import { Project } from 'modules/project/types'
 import { getSceneDefinition } from 'modules/project/export'
 import { getContentsStorageUrl } from 'lib/api/builder'
+import { capitalize } from 'lib/text'
 import { Vector3 } from 'modules/common/types'
 import { Scene, EntityDefinition, ComponentDefinition, ComponentType } from 'modules/scene/types'
 import { TRANSPARENT_PIXEL } from 'lib/getModelData'
 import { getMetrics } from 'components/AssetImporter/utils'
 import { Item } from 'modules/item/types'
+import { base64ArrayBuffer } from './base64'
 
 const script = require('raw-loader!../../ecsScene/scene.js')
 
@@ -19,8 +21,9 @@ export const SCALE_GRID_RESOLUTION = 0.5
 export const SCALE_MIN_LIMIT = 0.001
 
 export function getNewEditorScene(project: Project): EditorScene {
+  const encoder = new TextEncoder()
   const mappings = {
-    'game.js': `data:application/javascript;base64,${btoa(script)}`,
+    'game.js': `data:application/javascript;base64,${base64ArrayBuffer(encoder.encode(script))}`,
     'scene.json': 'Qm' // stub required by the client
   }
 
@@ -207,4 +210,35 @@ export function mergeWearables(avatar: Wearable[], apply: Wearable[]) {
     wearables[wearable.category || wearable.id] = wearable
   }
   return Object.values(wearables)
+}
+
+export const pickRandom = <T>(array: T[]): T => {
+  return array[(Math.random() * array.length) | 0]
+}
+
+/*
+ * Converts stuff like "f_jeans_00" into "Jeans"
+ */
+export const getName = (wearable: Wearable) => {
+  let name = wearable.id.split(':').pop()!
+  if (name.startsWith('f_') || name.startsWith('m_')) {
+    // Remove prefixes f_ and m_
+    name = name.slice(2)
+  }
+  return name
+    .split('_')
+    .map(strPart => {
+      const part = Number(strPart)
+      const isNumeric = !isNaN(part)
+      /*
+       * Numeric parts are like 00, 01, 02. This ignores the 00, and parses the other ones, like:
+       * hair_00 -> hair
+       * hair_01 -> hair 2
+       * hair_02 -> hair 3
+       */
+      return !isNumeric || part <= 0 ? strPart : null
+    })
+    .filter(part => part != null) // Filter out ignored parts
+    .map(part => capitalize(part!))
+    .join(' ')
 }

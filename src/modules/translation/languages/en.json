@@ -60,7 +60,7 @@
       "errors": {
         "max_title_length": "Asset Pack titles can only be up to {count} characters long",
         "min_title_length": "Asset Pack titles must be at least {count} characters long",
-        "thumbnail_size": "Image file size must be less than {count} bytes"
+        "thumbnail_size": "Image file size must be less than {size}"
       },
       "items": {
         "empty": "This Asset Pack is empty",
@@ -137,7 +137,7 @@
   },
   "create_collection_modal": {
     "title": "New Collection",
-    "subtitle": "Give a name to your new collection",
+    "subtitle": "Enter a descriptive name for your new collection",
     "label": "Name",
     "placeholder": "My collection",
     "error_name_already_in_use": "Name already in use. Try a different one"
@@ -165,16 +165,23 @@
   "create_item_modal": {
     "title": "New Item",
     "add_representation": "Add {bodyShape} Repesentation",
-    "name_label": "Add a name to your item",
+    "name_label": "Enter a name for your item",
     "category_label": "What's the category of this item?",
     "category_placeholder": "Select a category",
     "rarity_label": "How rare is this item?",
     "rarity_placeholder": "Select a rarity",
-    "representation_label": "Which body shape does it represent?",
+    "representation_label": "Select the body shape for your item",
     "existing_item": "Is this part of an existing item?",
     "pick_item": "Pick an item that doesn't have a {bodyShape}",
     "adding_representation": "This will be added as {bodyShape} for the following item",
-    "change_item_file": "Edit representation"
+    "change_item_file": "Edit representation",
+    "error": {
+      "item_too_big": "The entire item is too big to be uploaded. The max size for all files (including the thumbnail) is {size}.",
+      "file_too_big": "The file is too big to be uploaded. The max size is {size}.",
+      "wrong_extension": "The file has an invalid extension.",
+      "invalid_files": "Files seem to be invalid or broken, please review them and try again.",
+      "missing_model_file": "Couldn't find a valid model file."
+    }
   },
   "edit_collection_name_modal": {
     "title": "Edit Collection Name",
@@ -400,6 +407,7 @@
     "error_ocurred": "An error ocurred",
     "eth_address": "ETH address",
     "finish": "Finish",
+    "free": "Free",
     "here": "here",
     "items": "items",
     "learn_more": "Learn more",
@@ -430,9 +438,8 @@
     "proceed": "Proceed",
     "address": "Address",
     "balance": "Balance",
+    "balances": "Balances",
     "revoke": "Revoke",
-    "parcel_plural": "parcels",
-    "estate_plural": "estates",
     "set": "Set",
     "settings": "Settings",
     "yes": "Yes",
@@ -447,7 +454,10 @@
       "name_asc": "Name ↑",
       "name_desc": "Name ↓"
     },
-    "total": "Total"
+    "total": "Total",
+    "parcel_plural": "Parcels",
+    "estate_plural": "Estates",
+    "none": "None"
   },
   "navigation": {
     "scenes": "Scenes",
@@ -490,7 +500,7 @@
     "description": "You can import any Scene made with the Builder!",
     "invalid_file": "Invalid file",
     "title": "Import Scene",
-    "upload_manually": "Import Manually"
+    "upload_manually": "Browse your computer"
   },
   "itemdrawer": {
     "opensea_credit": "Powered by {link}",
@@ -767,7 +777,6 @@
     "authorization_action": "Authorize {address} to operate all your {type} on your behalf.",
     "copy_address": "Copy Address",
     "copied": "Copied",
-    "buy_more_mana": "Buy More",
     "authorizations_title": "Active Authorizations"
   },
   "transaction": {
@@ -784,9 +793,10 @@
     "set_manager_revoked": "You revoked {address} as operator of all your {type}.",
     "collection_published": "Published the collection {name}",
     "saved_published_item": "You edited the item {name}",
-    "collection_items_minted": "Minted {count} items for the collection {name}",
-    "added_collection_managers": "Added {count} {count, plural, one {collaborator} other {collaborators}} on the collection {name}",
-    "removed_collection_managers": "Removed {count} {count, plural, one {collaborator} other {collaborators}} for the collection {name}",
+    "collection_item_minted": "Minted {itemName} for the collection {collectionName} {amount, plural, one {once} other {{amount} times}}",
+    "collection_items_minted": "Minted {count} items for the collection {collectionName}",
+    "updated_collection_managers": "Updated the collection's {name} managers",
+    "updated_collection_minters": "Updated the collection's {name} minters",
     "set_collection_on_sale": "Set the collection {name} on sale",
     "unset_collection_on_sale": "Removed the collection {name} from being on sale",
     "set_ens_resolver": "Set resolver for the name \"{name}\".",
@@ -872,7 +882,7 @@
     "no_items": "No items",
     "new_item": "New Item",
     "new_collection": "New Collection",
-    "empty_description": "You have no Items or Collections yet, start creating them and dress the metaverse with style"
+    "empty_description": "You have no Items or Collections yet. Create a new item or collection, and dress the metaverse in style!"
   },
   "curation_page": {
     "filter": {
@@ -906,17 +916,19 @@
     "publish": "Publish",
     "notice": "Cool! Now you can start working on your items. {editor_link} to open the editor or click the edit button on any item.",
     "click_here": "Click here",
-    "start_adding_items": "Looking good! now you can start adding items to your collection.",
-    "cant_remove": "You will not be able to remove or add items to your collection once its published.",
+    "start_adding_items": "Looking good! Start adding items to your new collection",
+    "cant_remove": "You will not be able to add or remove items after publishing your collection.",
     "cant_mint": "This collection is still under review, once that process ends you'll be able to mint items",
     "under_review": "Under Review"
   },
-  "context_menu": {
+  "collection_menu": {
     "add_existing_item": "Add Existing Item",
     "forum_post": "Forum post",
     "copy_address": "Copy address",
-    "unpublished": "This collection is still under review",
+    "see_in_world": "See in world",
+    "unpublished": "This collection not published yet",
     "managers": "Collaborators",
+    "minters": "Minters",
     "post_to_forum": "Post to forum",
     "posting": "Posting",
     "not_posted": "The collection wasn't posted to the forum. You can retry here"
@@ -943,24 +955,30 @@
     }
   },
   "edit_price_and_beneficiary_modal": {
-    "title": "Set price and address for {name}",
+    "title": "Set price and address for \"{name}\"",
+    "for_me": "I'm the beneficiary",
+    "free": "Make it free",
     "price_label": "Price",
-    "beneficiary_label": "Beneficiary"
+    "beneficiary_label": "Beneficiary",
+    "beneficiary_popup": "This is the wallet address that will receive MANA when this item is sold. You can set a different beneficiary address for each item in a collection."
   },
   "confirm_delete": {
     "content": "Are you sure you want to delete \"{name}\"?"
   },
   "publish_collection_modal": {
     "title": "Publish Collection",
-    "first_paragraph": "You are about to publish your collection, keep in mind the following things:",
-    "second_paragraph": "You will not be able to add or delete items after you publish your collection",
-    "third_paragraph": "You will be able to see your items in the marketplace but they will available for sale once the collection is validated by the DAO",
-    "items_breakdown_title": "You are about to publish {items} items. The MANA fee for each collection goes to the Decentraland DAO, where it is used to support the growth of the community through grants, events, and prizes.",
-    "publish": "Publish"
+    "first_paragraph": "Before you publish your collection, please remember:",
+    "second_paragraph": "After publishing, you cannot add or remove items from your collection.",
+    "third_paragraph": "Items in your collection will appear in the Marketplace, but they cannot be sold until they are approved.",
+    "items_breakdown_title": "You are about to publish {count, plural, one {item} other {items}} items. The MANA fee for each collection goes to the Decentraland DAO, where it is used to support the growth of the community through grants, events, and prizes.",
+    "publish": "Publish",
+    "not_enogh_mana": "You don't have enough {symbol} to publish this collection.",
+    "get_mana": "You can get more using the {link} dapp."
   },
   "mint_items_modal": {
     "title": "Mint Items",
     "add_item": "Add Item",
+    "limit_reached": "You can only mint {max} items per transaction",
     "no_items": "You have no items available to mint for \"{name}\""
   },
   "sell_collection_modal": {
@@ -970,10 +988,19 @@
     "turn_off_description": "By turning this switch off your collection will not longer be available for purchase.",
     "turn_off": "Turn Off"
   },
-  "collection_managers_modal": {
-    "title": "Collaborators",
-    "add_manager": "Add Collaborator",
-    "no_managers": "No collaborators yet, start by",
+  "manage_collection_role_modal": {
+    "manager": {
+      "title": "Collaborators",
+      "subtitle": "If you collaborated with other creators when making this collection, enter their ETH address",
+      "add_new": "Add Collaborator",
+      "empty": "No collaborators yet, start by"
+    },
+    "minter": {
+      "title": "Minters",
+      "subtitle": "Enter the ETH address you want to allow for minting your items",
+      "add_new": "Add Minter",
+      "empty": "No minters yet, start by"
+    },
     "adding_one": "adding one!"
   },
   "collection_image": {
@@ -993,6 +1020,7 @@
       "discussion": "Discussion",
       "keep_reviewing": "Keep reviewing",
       "back_to_curation": "Back to curation",
+      "waiting_for_upload": "Some items in the collection are still being uploaded to the Catalyst. Please check back soon to proceed with the curation.",
       "reject": {
         "title": "Reject Collection",
         "subtitle": "I guess it's just not good enough, huh?",
@@ -1032,7 +1060,9 @@
       "hides": "Hides",
       "hides_info": "When a user equips your item, any other items in the category you select will stay equipped, but they won't be rendered. Users will only see their other items reappear after removing your item.",
       "tags": "Tags",
-      "select_placeholder": "Select an option"
+      "select_placeholder": "Select an option",
+      "request_for_changes": "Request for changes",
+      "request_for_changes_explanation": "If you want to make changes to {name} please ask a committee member for authorization in the forum"
     }
   },
   "wearable": {
@@ -1084,5 +1114,40 @@
   },
   "maintainance": {
     "notice": "We're currently under maintainance, we'll be back soon!"
+  },
+  "networks": {
+    "ethereum": "Ethereum",
+    "matic": "Polygon"
+  },
+  "intro_popup": {
+    "title": "Introducing Polygon MANA",
+    "blog_link": "blog post",
+    "account_link": "Account dApp",
+    "manage_account": "Account",
+    "content": "Polygon MANA will allow you to make transactions much faster and cheaper.{br}You can learn more about Polygon MANA in our {blog_link}, and don't forget you can start managing your coins in our new {account_link}.{br}Click your avatar, select {manage_account} and start conquering the Metaverse.",
+    "dismiss": "Got It!"
+  },
+  "toast": {
+    "meta_transaction_failure": {
+      "title": "Meta transaction",
+      "body": "There was an error sending the meta transaction.{br}Please try again or join our {discord_link} to get support."
+    },
+    "deploy_item_failure": {
+      "title": "Error on Item",
+      "body": "Fail to upload the item \"{itemName}\" from \"{collectionName}\".{br}The item size is too big for the max size of {size}"
+    }
+  },
+  "sagas": {
+    "collection": {
+      "invalid_character": "Invalid character! The \":\" is not allowed in names",
+      "missing_salt": "The collection has no salt"
+    },
+    "item": {
+      "Invalid identity": "Invalid Identity",
+      "invalid_character": "Invalid character! The \":\" is not allowed in names or descriptions",
+      "cant_save_published": "Item should not be published to save it",
+      "cant_persist_unpublished": "Item must be published to save using a transaction",
+      "cant_save_without_collection": "Can't save a published without a collection"
+    }
   }
 }

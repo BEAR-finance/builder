@@ -21,6 +21,9 @@
 }
 
 .TopPanel .title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1 auto;
   text-align: center;
   font-weight: 600;
@@ -30,6 +33,10 @@
 .TopPanel .actions {
   width: var(--item-editor-panel-width);
   text-align: right;
+}
+
+.TopPanel .actions .button-container {
+  display: inline-block;
 }
 
 .TopPanel .actions .ui.button {

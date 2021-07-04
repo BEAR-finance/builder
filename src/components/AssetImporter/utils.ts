@@ -9,7 +9,7 @@ export const ASSET_MANIFEST = 'asset.json'
   This RegEx searches for the beginning of the smart item's bundle, it's a comment that contains '! "src/game.ts" <commit-hash>'
   We split the code and take everything that comes AFTER this comment
 */
-export const CODE_SEPARATOR = /\/\*! \"src\/game\.ts\" [a-f0-9]+ \*\//
+export const CODE_SEPARATOR = /\/\*! \"src(\/|\\)([A-z0-9|\/|\\|\-|_])*\.ts\" [a-f0-9]+ \*\//
 
 /* 
   This separator searches for the end of the smart item's bundle, before the source maps start.
@@ -64,12 +64,11 @@ export async function prepareScript(scriptPath: string, namespace: string, conte
     // remove source maps
     if (text.includes(SOURCE_MAPS_SEPARATOR)) {
       const padding = text.trim().endsWith(';') ? 3 : 2
-      text =
-        text
-          .trim()
-          .slice(0, -padding)
-          .split(SOURCE_MAPS_SEPARATOR)
-          .shift()! + text.slice(-padding)
+      const parts = text
+        .trim()
+        .slice(0, -padding)
+        .split(SOURCE_MAPS_SEPARATOR)
+      text = parts.shift()! + text.slice(-padding)
     }
 
     /** Namespace module definitions
@@ -90,9 +89,9 @@ export async function prepareScript(scriptPath: string, namespace: string, conte
      * Into this:
      * ["require", "exports", "namespace/myDependency"]
      */
-    text = text.replace(/\[\\?\"require\\?\", \\?\"exports\\?\", ([\w|\\|\/|\"|,|\s]*)/g, (match, dependencies) => {
+    text = text.replace(/\[\\?\"require\\?\", \\?\"exports\\?\", ([\w|\\|\/|\"|,|\s|@]*)/g, (match, dependencies) => {
       let code = match.slice(0, -dependencies.length) // remove previous dependencies
-      const newDependencies = dependencies.replace(/\\?\"(.*?)\\?\"/g, `\\\"${namespace}/$1\\\"`) // adds the namespace to each dependency
+      const newDependencies = dependencies.replace(/\\?\"(\w.*?)\\?\"/g, `\\\"${namespace}/$1\\\"`) // adds the namespace to each dependency
       return code + newDependencies
     })
 
@@ -106,8 +105,8 @@ export async function prepareScript(scriptPath: string, namespace: string, conte
       text = text.replace(new RegExp(path, 'g'), `${namespace}/${path}`)
     }
 
-    // Remove extra /src
-    text = text.replace(/src\//g, '')
+    // Remove extra src/
+    text = text.replace(/src(\/|\\)/g, '')
 
     contents[scriptPath] = new Blob([text], {
       type: 'text/plain'

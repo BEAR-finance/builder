@@ -31,14 +31,16 @@ import {
   WearableCategory,
   ItemRarity,
   ITEM_NAME_MAX_LENGTH,
-  WearableRepresentation
+  WearableRepresentation,
+  MODEL_EXTENSIONS,
+  IMAGE_EXTENSIONS
 } from 'modules/item/types'
 import { EngineType, getModelData } from 'lib/getModelData'
 import { computeHashes } from 'modules/deployment/contentUtils'
 import FileImport from 'components/FileImport'
 import ItemDropdown from 'components/ItemDropdown'
 import Icon from 'components/Icon'
-import { getExtension, MAX_FILE_SIZE } from 'lib/file'
+import { getExtension } from 'lib/file'
 import { ModelMetrics } from 'modules/scene/types'
 import {
   getBodyShapeType,
@@ -47,8 +49,12 @@ import {
   getWearableCategories,
   getBackgroundStyle,
   isModelPath,
-  isImageFile
+  isImageFile,
+  MAX_FILE_SIZE,
+  resizeImage,
+  isImageCategory
 } from 'modules/item/utils'
+import { FileTooBigError, WrongExtensionError, InvalidFilesError, MissingModelFileError } from 'modules/item/errors'
 import { getThumbnailType } from './utils'
 import { Props, State, CreateItemView, CreateItemModalMetadata, StateData } from './CreateItemModal.types'
 import './CreateItemModal.css'
@@ -96,7 +102,8 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
 
     let changeItemFile = false
     let addRepresentation = false
-    let pristineItem = null
+    let pristineItem: Item | null = null
+    let computedHashes: Record<string, string> = {}
 
     if (metadata) {
       changeItemFile = metadata.changeItemFile
@@ -127,6 +134,9 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
         contents[THUMBNAIL_PATH] = blob
       }
 
+      // compute new contents
+      computedHashes = await computeHashes(contents!)
+
       // Add this item as a representation of an existing item
       if ((isRepresentation || addRepresentation) && editedItem) {
         item = {
@@ -154,17 +164,14 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
           updatedAt: +new Date()
         }
 
-        // add new contents
-        const newContents = await computeHashes(contents!)
-        delete newContents[THUMBNAIL_PATH] // we do not override the old thumbnail with the new one from this representation
-        for (const path in newContents) {
-          item.contents[path] = newContents[path]
-        }
+        delete computedHashes[THUMBNAIL_PATH] // we do not override the old thumbnail with the new one from this representation
       } else if (pristineItem && changeItemFile) {
         item = {
           ...(pristineItem as Item),
           data: {
             ...pristineItem.data,
+            replaces: [],
+            hides: [],
             category
           },
           name,
@@ -187,12 +194,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
           item.data.representations[representationIndex] = representations[0]
         }
 
-        // add new contents
-        const newContents = await computeHashes(contents!)
-        delete newContents[THUMBNAIL_PATH] // we do not override the old thumbnail with the new one from this representation
-        for (const path in newContents) {
-          item.contents[path] = newContents[path]
-        }
+        delete computedHashes[THUMBNAIL_PATH] // we do not override the old thumbnail with the new one from this representation
       } else {
         // create item to save
         item = {
@@ -216,10 +218,14 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
           },
           owner: address!,
           metrics,
-          contents: await computeHashes(contents!),
+          contents: {},
           createdAt: +new Date(),
           updatedAt: +new Date()
         }
+      }
+
+      for (const path in computedHashes) {
+        item.contents[path] = computedHashes[path]
       }
 
       const onSaveItem = pristineItem && pristineItem.isPublished ? onSavePublished : onSave
@@ -245,7 +251,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
           const blob = await file.async('blob')
 
           if (blob.size > MAX_FILE_SIZE) {
-            throw new Error('File too big')
+            throw new FileTooBigError()
           }
 
           return {
@@ -263,7 +269,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
     const modelPath = fileNames.find(isModelPath)
 
     if (!modelPath) {
-      throw new Error('Missing model file')
+      throw new MissingModelFileError()
     }
 
     return this.processModel(modelPath, contents)
@@ -271,7 +277,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
 
   handleModelFile = async (file: File) => {
     if (file.size > MAX_FILE_SIZE) {
-      throw new Error('File too big')
+      throw new FileTooBigError()
     }
 
     const modelPath = file.name
@@ -283,9 +289,8 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
   }
 
   handleDropAccepted = async (acceptedFiles: File[]) => {
-    this.setState({ isLoading: true })
-
     const { metadata } = this.props
+    const { isRepresentation, category } = this.state
 
     let changeItemFile = false
     let item = null
@@ -299,8 +304,10 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
     const extension = getExtension(file.name)
 
     try {
+      this.setState({ isLoading: true })
+
       if (!extension) {
-        throw new Error('Wrong extension')
+        throw new WrongExtensionError()
       }
 
       const handler = extension === '.zip' ? this.handleZipFile : this.handleModelFile
@@ -315,6 +322,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
         metrics,
         contents,
         error: '',
+        category: isRepresentation ? category : undefined,
         isLoading: false
       })
     } catch (error) {
@@ -324,7 +332,8 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
 
   handleDropRejected = async (rejectedFiles: File[]) => {
     console.warn('rejected', rejectedFiles)
-    this.setState({ error: 'Invalid files' })
+    const error = new InvalidFilesError()
+    this.setState({ error: error.message })
   }
 
   handleOpenDocs = () => window.open('https://docs.decentraland.org/3d-modeling/3d-models/', '_blank')
@@ -353,23 +362,14 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
     }
   }
 
-  handleThumbnailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  handleThumbnailChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const { contents } = this.state
     const { files } = event.target
 
-    const MAX_THUMBNAIL_SIZE = 5000000
-
     if (files && files.length > 0) {
       const file = files[0]
-      if (file.size > MAX_THUMBNAIL_SIZE) {
-        alert(
-          t('asset_pack.edit_assetpack.errors.thumbnail_size', {
-            count: MAX_THUMBNAIL_SIZE
-          })
-        )
-        return
-      }
-      const thumbnail = URL.createObjectURL(file)
+      const resizedFile = await resizeImage(file)
+      const thumbnail = URL.createObjectURL(resizedFile)
 
       this.setState({
         thumbnail,
@@ -411,18 +411,21 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
     } else {
       const url = URL.createObjectURL(contents[model])
       const { image, info } = await getModelData(url, {
-        width: 1024,
-        height: 1024,
+        width: 256,
+        height: 256,
         extension: getExtension(model) || undefined,
         engine: EngineType.BABYLON
       })
       URL.revokeObjectURL(url)
 
+      // for some reason the renderer reports 2x the amount of textures for wearble items
+      info.textures = Math.round(info.textures / 2)
+
       thumbnail = image
       metrics = info
     }
 
-    if (this.hasCustomImage(model, contents)) {
+    if (isImageFile(model!)) {
       thumbnail = await this.processImage(contents[THUMBNAIL_PATH] || contents[model], this.state.category)
     }
 
@@ -431,21 +434,24 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
 
   async updateThumbnail(category: WearableCategory) {
     const { model, contents } = this.state
-    const url = URL.createObjectURL(contents![model!])
 
-    let thumbnail
-    if (contents && this.hasCustomImage(model, contents)) {
-      thumbnail = await this.processImage(contents[THUMBNAIL_PATH] || contents[model!], category)
-    } else {
-      const { image } = await getModelData(url, {
-        thumbnailType: getThumbnailType(category),
-        extension: (model && getExtension(model)) || undefined,
-        engine: EngineType.BABYLON
-      })
-      thumbnail = image
+    const isCustom = !!contents && THUMBNAIL_PATH in contents
+    if (!isCustom) {
+      let thumbnail
+      if (contents && isImageFile(model!)) {
+        thumbnail = await this.processImage(contents[THUMBNAIL_PATH] || contents[model!], category)
+      } else {
+        const url = URL.createObjectURL(contents![model!])
+        const { image } = await getModelData(url, {
+          thumbnailType: getThumbnailType(category),
+          extension: (model && getExtension(model)) || undefined,
+          engine: EngineType.BABYLON
+        })
+        thumbnail = image
+        URL.revokeObjectURL(url)
+      }
+      this.setState({ thumbnail })
     }
-    URL.revokeObjectURL(url)
-    this.setState({ thumbnail })
   }
 
   async processImage(blob: Blob, category: WearableCategory = WearableCategory.EYES) {
@@ -519,7 +525,9 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
   }
 
   renderDropzoneCTA = (open: () => void) => {
-    const { error, isLoading } = this.state
+    const { metadata } = this.props
+    const { changeItemFile } = metadata as CreateItemModalMetadata
+    const { error, isLoading, isRepresentation, category } = this.state
     return (
       <>
         {isLoading ? (
@@ -532,7 +540,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
           values={{
             models_link: (
               <span className="link" onClick={this.handleOpenDocs}>
-                GLB, GLTF, PNG, ZIP
+                {isRepresentation || changeItemFile ? (isImageCategory(category!) ? 'PNG, ZIP' : 'GLB, GLTF, ZIP') : 'GLB, GLTF, PNG, ZIP'}
               </span>
             ),
             action: (
@@ -544,7 +552,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
         />
         {error ? (
           <Row className="error" align="center">
-            <p>{t('global.error_ocurred')}</p>
+            <p className="danger-text">{error}</p>
           </Row>
         ) : null}
       </>
@@ -567,7 +575,9 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
   }
 
   renderImportView() {
-    const { onClose } = this.props
+    const { onClose, metadata } = this.props
+    const { changeItemFile } = metadata as CreateItemModalMetadata
+    const { isRepresentation, category } = this.state
     const title = this.renderModalTitle()
 
     return (
@@ -575,7 +585,9 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
         <ModalNavigation title={title} onClose={onClose} />
         <Modal.Content>
           <FileImport
-            accept={ITEM_EXTENSIONS}
+            accept={
+              isRepresentation || changeItemFile ? (isImageCategory(category!) ? IMAGE_EXTENSIONS : MODEL_EXTENSIONS) : ITEM_EXTENSIONS
+            }
             onAcceptedFiles={this.handleDropAccepted}
             onRejectedFiles={this.handleDropRejected}
             renderAction={this.renderDropzoneCTA}
@@ -622,6 +634,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
 
   isValid(): boolean {
     const { name, thumbnail, metrics, bodyShape, category, rarity, item, isRepresentation } = this.state
+
     const required: (string | ModelMetrics | Item | undefined)[] = isRepresentation
       ? [item]
       : [name, thumbnail, metrics, bodyShape, category, rarity]
@@ -630,7 +643,7 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
   }
 
   renderDetailsView() {
-    const { onClose, isLoading, metadata, error } = this.props
+    const { onClose, metadata, error, isLoading } = this.props
     const { thumbnail, metrics, bodyShape, isRepresentation, item, rarity } = this.state
 
     const isDisabled = this.isDisabled()
@@ -648,8 +661,12 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
                 <Column className="preview" width={192} grow={false}>
                   <div className="thumbnail-container">
                     <img className="thumbnail" src={thumbnail || undefined} style={thumbnailStyle} />
-                    <Icon name="camera" onClick={this.handleOpenThumbnailDialog} />
-                    <input type="file" ref={this.thumbnailInput} onChange={this.handleThumbnailChange} accept="image/png, image/jpeg" />
+                    {isRepresentation ? null : (
+                      <>
+                        <Icon name="camera" onClick={this.handleOpenThumbnailDialog} />
+                        <input type="file" ref={this.thumbnailInput} onChange={this.handleThumbnailChange} accept="image/png, image/jpeg" />
+                      </>
+                    )}
                   </div>
                   {metrics ? (
                     <div className="metrics">
@@ -716,12 +733,12 @@ export default class CreateItemModal extends React.PureComponent<Props, State> {
               </Row>
               <Row className="actions" align="right">
                 <Button primary disabled={isDisabled} loading={isLoading}>
-                  {metadata && metadata.changeItemFile ? t('global.save') : t('global.add')}
+                  {metadata && metadata.changeItemFile ? t('global.save') : t('global.create')}
                 </Button>
               </Row>
               {error ? (
                 <Row className="error" align="right">
-                  <p>{t('global.error_ocurred')}</p>{' '}
+                  <p className="danger-text">{error}</p>
                 </Row>
               ) : null}
             </Column>

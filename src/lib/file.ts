@@ -1,7 +1,5 @@
 import { MAX_NAME_LENGTH } from 'modules/asset/utils'
 
-export const MAX_FILE_SIZE = 10000000
-
 export function truncateFileName(name: string) {
   if (name.length <= MAX_NAME_LENGTH) return name
   const firstPart = name.substr(0, 4)
@@ -13,4 +11,8 @@ export function getExtension(fileName: string) {
   const matches = fileName.match(/\.[0-9a-z]+$/i)
   const extension = matches ? matches[0] : null
   return extension
+}
+
+export function toMB(bytes: number) {
+  return bytes / 1024 / 1024
 }

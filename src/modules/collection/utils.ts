@@ -1,21 +1,48 @@
 import { Address } from 'web3x-es/address'
 import { toBN } from 'web3x-es/utils'
 import { env, utils } from 'decentraland-commons'
+import { ChainId, Network, getChainName } from '@dcl/schemas'
+import { getChainConfiguration } from 'decentraland-dapps/dist/lib/chainConfiguration'
 import { ContractName, getContract } from 'decentraland-transactions'
 import { Wallet } from 'decentraland-dapps/dist/modules/wallet/types'
 import { Item } from 'modules/item/types'
 import { getMetadata } from 'modules/item/utils'
-import { isEqual } from 'lib/address'
+import { isEqual, includes } from 'lib/address'
 import { InitializeItem, Collection, Access } from './types'
 
 export function setOnSale(collection: Collection, wallet: Wallet, isOnSale: boolean): Access[] {
-  const { address } = getContract(ContractName.CollectionStore, wallet.networks.MATIC.chainId)
+  const address = getSaleAddress(wallet.networks.MATIC.chainId)
   return [{ address, hasAccess: isOnSale, collection }]
 }
 
 export function isOnSale(collection: Collection, wallet: Wallet) {
-  const { address } = getContract(ContractName.CollectionStore, wallet.networks.MATIC.chainId)
-  return collection.minters.includes(address)
+  const address = getSaleAddress(wallet.networks.MATIC.chainId)
+  return includes(collection.minters, address)
+}
+
+export function getSaleAddress(chainId: ChainId) {
+  return getContract(ContractName.CollectionStore, chainId).address.toLowerCase()
+}
+
+export function getExplorerURL(collection: Collection, chainId: ChainId) {
+  if (!collection.contractAddress) {
+    throw new Error('You need the collection and item to be published to get the catalyst urn')
+  }
+
+  let id = collection.id
+  if (collection.isPublished) {
+    const config = getChainConfiguration(chainId)
+    const chainName = getChainName(config.networkMapping[Network.MATIC])
+    if (!chainName) {
+      throw new Error(`Could not find a valid chain name for network ${Network.MATIC} on config ${JSON.stringify(config.networkMapping)}`)
+    }
+
+    id = `urn:decentraland:${chainName.toLowerCase()}:collections-v2:${collection.contractAddress}`
+  }
+
+  // We're replacing org and hardcoding zone here because it only works on that domain for now, to avoid adding new env vars
+  const EXPLORER_URL = env.get('REACT_APP_EXPLORER_URL', '').replace('.org', '.zone')
+  return `${EXPLORER_URL}?WITH_COLLECTIONS=${id}`
 }
 
 export function getCollectionBaseURI() {
@@ -44,19 +71,23 @@ export function toCollectionObject(collections: Collection[]) {
 }
 
 export function canSeeCollection(collection: Collection, address: string) {
-  return collection && [collection.owner, ...collection.managers, ...collection.minters].some(addr => isEqual(addr, address))
+  return !!collection && [collection.owner, ...collection.managers, ...collection.minters].some(addr => isEqual(addr, address))
 }
 
 export function isOwner(collection: Collection, address?: string) {
-  return address && isEqual(collection.owner, address)
+  return !!address && isEqual(collection.owner, address)
 }
 
 export function isMinter(collection: Collection, address?: string) {
-  return address && collection.minters.some(minter => isEqual(minter, address))
+  return !!address && collection.minters.some(minter => isEqual(minter, address))
 }
 
 export function isManager(collection: Collection, address?: string) {
-  return address && collection.managers.some(manager => isEqual(manager, address))
+  return !!address && collection.managers.some(manager => isEqual(manager, address))
+}
+
+export function isEditable(collection: Collection) {
+  return !collection.isApproved
 }
 
 export function canMintCollectionItems(collection: Collection, address?: string) {

@@ -1,18 +1,20 @@
 import { connect } from 'react-redux'
 import { RootState } from 'modules/common/types'
+import { isConnected } from 'decentraland-dapps/dist/modules/wallet/selectors'
 import { getSelectedCollectionId, getSelectedItemId } from 'modules/location/selectors'
 import { getBodyShape, getVisibleItems } from 'modules/editor/selectors'
 import { setItems } from 'modules/editor/actions'
 import { getItems, getWalletOrphanItems } from 'modules/item/selectors'
-import { getWalletCollections } from 'modules/collection/selectors'
+import { getAuthorizedCollections } from 'modules/collection/selectors'
 import { setCollection } from 'modules/item/actions'
 import { MapStateProps, MapDispatchProps, MapDispatch } from './LeftPanel.types'
 import LeftPanel from './LeftPanel'
 
 const mapState = (state: RootState): MapStateProps => ({
+  isConnected: isConnected(state),
   items: getItems(state),
   orphanItems: getWalletOrphanItems(state),
-  collections: getWalletCollections(state),
+  collections: getAuthorizedCollections(state),
   selectedItemId: getSelectedItemId(state),
   selectedCollectionId: getSelectedCollectionId(state),
   visibleItems: getVisibleItems(state),

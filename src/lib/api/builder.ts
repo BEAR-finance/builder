@@ -1,4 +1,4 @@
-import { AxiosRequestConfig } from 'axios'
+import { AxiosRequestConfig, AxiosError } from 'axios'
 import { env } from 'decentraland-commons'
 import { BaseAPI, APIParam } from 'decentraland-dapps/dist/lib/api'
 import { Omit } from 'decentraland-dapps/dist/lib/types'
@@ -182,7 +182,9 @@ function fromRemotePool(remotePool: RemotePool): Pool {
 
   pool.thumbnail = `${BUILDER_SERVER_URL}/projects/${remotePool.id}/media/preview.png`
   pool.isPublic = true
-  ;(pool.groups = remotePool.groups || []), (pool.likes = remotePool.likes || 0), (pool.like = !!remotePool.like)
+  pool.groups = remotePool.groups || []
+  pool.likes = remotePool.likes || 0
+  pool.like = !!remotePool.like
 
   if (remotePool.parcels) {
     pool.statistics = {
@@ -276,8 +278,8 @@ function toRemoteItem(item: Item): RemoteItem {
     beneficiary: item.beneficiary || null,
     rarity: item.rarity || null,
     total_supply: item.totalSupply === undefined ? null : item.totalSupply,
-    is_published: item.isPublished || false,
-    is_approved: item.isApproved || false,
+    is_published: false,
+    is_approved: false,
     in_catalyst: item.inCatalyst || false,
     type: item.type,
     data: item.data,
@@ -325,8 +327,8 @@ function toRemoteCollection(collection: Collection): RemoteCollection {
     eth_address: collection.owner,
     salt: collection.salt || null,
     contract_address: collection.contractAddress || null,
-    is_published: collection.isPublished,
-    is_approved: collection.isApproved,
+    is_published: false,
+    is_approved: false,
     minters: collection.minters,
     managers: collection.managers,
     forum_link: collection.forumLink,
@@ -414,7 +416,7 @@ export type PoolFilters = {
 // API
 
 export class BuilderAPI extends BaseAPI {
-  request(method: AxiosRequestConfig['method'], path: string, params?: APIParam | null, config?: AxiosRequestConfig) {
+  async request(method: AxiosRequestConfig['method'], path: string, params?: APIParam | null, config?: AxiosRequestConfig) {
     let authConfig = {}
     let headers = {}
     if (config) {
@@ -429,7 +431,16 @@ export class BuilderAPI extends BaseAPI {
       ...authHeaders
     }
     authConfig = { ...authConfig, headers }
-    return super.request(method, path, params, authConfig)
+
+    try {
+      const response = await super.request(method, path, params, authConfig)
+      return response
+    } catch (error) {
+      if (this.isAxiosError(error) && error.response) {
+        error.message = error.response.data.error
+      }
+      throw error
+    }
   }
 
   async deployToPool(projectId: string, additionalInfo: PoolDeploymentAdditionalFields | null = null) {
@@ -638,6 +649,10 @@ export class BuilderAPI extends BaseAPI {
 
   async fetchRarities(): Promise<Rarity[]> {
     return this.request('get', '/rarities')
+  }
+
+  private isAxiosError(error: any): error is AxiosError {
+    return error.isAxiosError
   }
 }
 

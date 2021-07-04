@@ -59,7 +59,7 @@
       "errors": {
         "max_title_length": "El titulo del Asset Pack sólo puede contener un máximo de {count} caracteres",
         "min_title_length": "El titulo del Asset Pack debe contener al menos {count} caracteres",
-        "thumbnail_size": "El tamaño de la imagen debe ser menor a {count} bytes"
+        "thumbnail_size": "El tamaño de la imagen debe ser menor a {size}"
       },
       "items": {
         "empty": "Este Asset Pack se encuentra vacío",
@@ -140,7 +140,7 @@
   },
   "create_collection_modal": {
     "title": "Nueva Colección",
-    "subtitle": "Ponle un nombre a tu nueva colleción",
+    "subtitle": "Ponle un nombre descriptivo a tu nueva colleción",
     "label": "Nombre",
     "placeholder": "Mi colleción",
     "error_name_already_in_use": "Nombre en uso. Prueba uno diferente"
@@ -173,11 +173,18 @@
     "category_placeholder": "Selecciona una categoria",
     "rarity_label": "Cuál es la rareza de este item?",
     "rarity_placeholder": "Selecciona una rareza",
-    "representation_label": "Para que forma de cuerpo es este item?",
+    "representation_label": "Selecciona el tipo de cuerpo para tu item",
     "existing_item": "Es parte de un item existente?",
     "pick_item": "Elige un item que no sea para un cuerpo con {bodyShape}",
     "adding_representation": "Esto será agregado como {bodyShape} para el siguiente item",
-    "change_item_file": "Editar representación"
+    "change_item_file": "Editar representación",
+    "error": {
+      "item_too_big": "El item entero es demasiado grande para cargarlo. El tamaño máximo de todos los archivos (contando el thumbnail) es {size}.",
+      "file_too_big": "El archivo es demasiado grande para cargarlo. El tamaño máximo es {size}.",
+      "wrong_extension": "El archivo tiene una extensión inválida.",
+      "invalid_files": "Los archivos parecen no ser válidos o estar dañados. Por favor revíselos y vuelva a intentarlo.",
+      "missing_model_file": "No se pudo encontrar un archivo de modelo válido."
+    }
   },
   "edit_collection_name_modal": {
     "title": "Editar Nombre",
@@ -402,6 +409,7 @@
     "error_ocurred": "Ha ocurrido un error",
     "eth_address": "ETH address",
     "finish": "Finalizar",
+    "free": "Gratis",
     "here": "aquí",
     "items": "objetos",
     "learn_more": "Más información",
@@ -431,9 +439,8 @@
     "proceed": "Proceder",
     "address": "Dirección",
     "balance": "Balance",
+    "balances": "Balances",
     "revoke": "Revocar",
-    "parcel_plural": "parcelas",
-    "estate_plural": "estates",
     "set": "Establecer",
     "settings": "Ajustes",
     "yes": "Si",
@@ -448,7 +455,10 @@
       "name_asc": "Nombre ↑",
       "name_desc": "Nombre ↓"
     },
-    "total": "Total"
+    "total": "Total",
+    "parcel_plural": "Parcelas",
+    "estate_plural": "Estates",
+    "none": "Ninguno"
   },
   "navigation": {
     "scenes": "Escenas",
@@ -498,7 +508,7 @@
     "description": "¡Puedes cargar Escenas exportadas desde otras instancias del Builder!",
     "invalid_file": "Archivo inválido",
     "title": "Importar Escena",
-    "upload_manually": "Súbelas manualmente"
+    "upload_manually": "Busca en tu computadora"
   },
   "itemdrawer": {
     "opensea_credit": "Impulsado por {link}",
@@ -776,7 +786,6 @@
     "authorization_action": "Autorizar a {address} para que pueda operar tus {type}.",
     "copy_address": "Copiar direccion",
     "copied": "Copiada",
-    "buy_more_mana": "Comprar Más",
     "authorizations_title": "Autorizaciones Activas"
   },
   "transaction": {
@@ -793,9 +802,10 @@
     "set_manager_revoked": "Has revocado a {address} como operador de tus {type}.",
     "collection_published": "Collección {name} publicada",
     "saved_published_item": "Has editado el item {name}",
+    "collection_item_minted": "Item {itemName} creado para la colección {collectionName} {amount, plural, one {una vez} other {{amount} veces}}",
     "collection_items_minted": "{count} items creados para la colleción {name}",
-    "added_collection_managers": "{count} {count, plural, one {colaboradores} other {colaboradoress}} agreados a la colección {name}",
-    "removed_collection_managers": "{count} {count, plural, one {colaboradores} other {colaboradoress}} borrados de la colección {name}",
+    "updated_collection_managers": "Actualizados los colaboradores de la colección {name}",
+    "updated_collection_minters": "Actualizados los emisores de la colección {name}",
     "set_collection_on_sale": "Colección {name} puesta a la venta",
     "unset_collection_on_sale": "La colección {name} ya no está a la venta",
     "set_ens_resolver": "Haz asignado el resolver para el nombre \"{name}\".",
@@ -914,20 +924,22 @@
     "on_sale": "En venta",
     "set_on_sale_popup": "Esto permitirá que tu colección sea vendida dentro del mundo.",
     "unset_on_sale_popup": "Esta colección está disponibles para la compra dentro del mundo.",
+    "publish": "Publicar",
     "notice": "Bien! Ahora puedes empezar a trabajar con tus items. {editor_link} para abrir el editor o edita cada item.",
     "click_here": "Clickea aquí",
-    "publish": "Publicar",
-    "start_adding_items": "̉¡Se ve bien! Ahora puedes comenzar a agregar items a tu colección.",
+    "start_adding_items": "¡Se ve bien! Ahora puedes comenzar a agregar items a tu colección.",
     "cant_remove": "No podrás agregar o remover items de tu colección una vez que esté publicada.",
     "cant_mint": "Esta colección todavía no está verificada, cuando ese proceso termine, podrás crear items",
     "under_review": "No verificada"
   },
-  "context_menu": {
+  "collection_menu": {
     "add_existing_item": "Agregar item existente",
     "forum_post": "Post en el foro",
     "copy_address": "Copiar dirección",
-    "unpublished": "Esta colleción aún no está verificada",
+    "see_in_world": "Ver en el mundo",
+    "unpublished": "Esta colleción aún no está publicada",
     "managers": "Colaboradores",
+    "minters": "Emisores",
     "post_to_forum": "Post al foro",
     "posting": "Posteando",
     "not_posted": "La colección no tiene un post asociado. Puedes intentar crearlo aquí"
@@ -954,9 +966,12 @@
     }
   },
   "edit_price_and_beneficiary_modal": {
-    "title": "Asignar un precio y un beneficiario para {name}",
+    "title": "Asignar un precio y un beneficiario para \"{name}\"",
+    "for_me": "Soy el beneficiario",
+    "free": "Hacerlo gratuito",
     "price_label": "Precio",
-    "beneficiary_label": "Beneficiario"
+    "beneficiary_label": "Beneficiario",
+    "beneficiary_popup": "Esta es la dirección de la billetera que recibirá MANA cuando se venda este item. Puede establecer una dirección de beneficiario diferente para cada item de una colección."
   },
   "confirm_delete": {
     "content": "¿Estás seguro que quieres eliminar \"{name}\"?"
@@ -965,9 +980,11 @@
     "title": "Publicar Collección",
     "first_paragraph": "Estás por publicar tu colleción, recuerda que:",
     "second_paragraph": "No serás capaz de agregar o borrar items luego de publicar",
-    "third_paragraph": "Podrás ver tus items en el marketplace pero serán puestos en venta luego de ser validados por la DAO",
-    "items_breakdown_title": "Estas por publicar {items} items. El fee de MANA por publicar la collección será enviado a la DAO, donde va a ser usado para soportar grants, eventos y premios",
-    "publish": "Publish"
+    "third_paragraph": "Los items de la colección aparecerán en Marketplace, pero no se pueden vender hasta que sean aprobados.",
+    "items_breakdown_title": "Estas por publicar {count} items. El fee de MANA por publicar la collección será enviado a la DAO, donde va a ser usado para soportar grants, eventos y premios",
+    "publish": "Publicar",
+    "not_enogh_mana": "No tienes suficiente {symbol} para publicar la collección.",
+    "get_mana": "Puedes obtener más usando la {link} dapp."
   },
   "sell_collection_modal": {
     "title": "Quieres vender tus items?",
@@ -979,13 +996,23 @@
   "mint_items_modal": {
     "title": "Crear Items",
     "add_item": "Agregar Item",
+    "limit_reached": "Solo puede crear {max} items por transaction",
     "no_items": "No tienes items disponibles para crear en la colleción \"{name}\""
   },
-  "collection_managers_modal": {
-    "title": "Colaboradores",
-    "add_manager": "Agregar Colaborador",
-    "no_managers": "No hay colaboradores, comienza por",
-    "adding_one": "agregar uno!"
+  "manage_collection_role_modal": {
+    "manager": {
+      "title": "Colaboradores",
+      "subtitle": "Si has colaborado con otros emisores, agrega sus direcciones de ETH aquí",
+      "add_new": "Agregar Colaborador",
+      "empty": "No hay colaboradores aún, empieza"
+    },
+    "minter": {
+      "title": "Emisores",
+      "subtitle": "Agrega la dirección de ETH para permitir la creación de tus items",
+      "add_new": "Agregar Creador",
+      "empty": "No hay emisores aún, empieza"
+    },
+    "adding_one": "agregando uno!"
   },
   "collection_image": {
     "no_items": "No Items"
@@ -1004,6 +1031,7 @@
       "discussion": "Discusión",
       "keep_reviewing": "Continua verificando",
       "back_to_curation": "Volver a curar",
+      "waiting_for_upload": "Algunos items de la colección aún se están cargando al Catalyst. Por favor prueba nuevamente en unos momentos para proceder.",
       "reject": {
         "title": "Rechazar Colección",
         "subtitle": "No es lo suficientemente buena?",
@@ -1043,7 +1071,9 @@
       "hides": "Oculta",
       "hides_info": "Cuando un usuario equipa tu item, cualquier otro item de la categoría que selecciones permanecerá equipado, pero no se renderizará. Los usuarios solo verán reaparecer sus otros elementos después de eliminar su elemento.",
       "tags": "Etiquetas",
-      "select_placeholder": "Selecciona una opción"
+      "select_placeholder": "Selecciona una opción",
+      "request_for_changes": "Solicitud de cambios",
+      "request_for_changes_explanation": "Si desea realizar cambios en {name}, solicite autorización a un miembro del comité en el foro"
     }
   },
   "wearable": {
@@ -1095,5 +1125,40 @@
   },
   "maintainance": {
     "notice": "Estamos en mantenimiento, volveremos pronto!"
+  },
+  "networks": {
+    "ethereum": "Ethereum",
+    "matic": "Polygon"
+  },
+  "intro_popup": {
+    "title": "Introducimos Polygon MANA",
+    "blog_link": "blog post",
+    "account_link": "dApp de Account",
+    "manage_account": "Mi Cuenta",
+    "content": "Polygon MANA te permitirá hacer transacciones mas rápido y barato.{br}Puedes aprender mas sobre Polygon MANA en nuestro {blog_link}.{br}Puedes gestionar tus tokens desde la {account_link}.{br}Haz click en tu avatar, luego en {manage_account} y comienza a conquistar el Metaverso.",
+    "dismiss": "Entendido!"
+  },
+  "toast": {
+    "meta_transaction_failure": {
+      "title": "Meta transacción",
+      "body": "Ocurrió un error publicando la meta transacción.{br}Intentelo de nuevo o ingrese a nuestro {discord_link} para obtener más información."
+    },
+    "deploy_item_failure": {
+      "title": "Error en el Item",
+      "body": "Error al cargar el item \"{itemName}\" de \"{collectionName}\".{br}El tamaño del item es demasiado grande y el tamaño máximo permitido es {size} "
+    }
+  },
+  "sagas": {
+    "collection": {
+      "invalid_character": "¡Carácter invalido! El \":\" no está permitido en los nombres",
+      "missing_salt": "La colección no tiene salt"
+    },
+    "item": {
+      "Invalid identity": "Identidad inválida",
+      "invalid_character": "¡Carácter invalido! El \":\" no está permitido en nombres o descripciones",
+      "cant_save_published": "El item no debe publicarse para guardarlo.",
+      "cant_persist_unpublished": "El item debe estar publicado para guardar usando una transacción",
+      "cant_save_without_collection": "No se puede guardar una publicación sin una colección"
+    }
   }
 }

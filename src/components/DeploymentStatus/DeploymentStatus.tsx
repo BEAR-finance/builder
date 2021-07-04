@@ -3,7 +3,7 @@ import { Popup } from 'decentraland-ui'
 import { t } from 'decentraland-dapps/dist/modules/translation/utils'
 import { DeploymentStatus as Status } from 'modules/deployment/types'
 import { getDeployment, getStatus } from 'modules/deployment/utils'
-import { coordsToId } from 'modules/land/utils'
+import { coordsToId, getExplorerURL } from 'modules/land/utils'
 import { Props } from './DeploymentStatus.types'
 import './DeploymentStatus.css'
 
@@ -37,12 +37,9 @@ export default class DeploymentStatus extends React.PureComponent<Props> {
 
     return (
       <Popup
-        className="status"
         position="bottom left"
         content={tooltip}
-        trigger={
-          <a className={classes} href={`https://play.decentraland.org?position=${x},${y}`} target="_blank" rel="no:opener no:referrer" />
-        }
+        trigger={<a className={classes} href={getExplorerURL(x, y)} target="_blank" rel="no:opener no:referrer" />}
         on="hover"
         inverted
       />

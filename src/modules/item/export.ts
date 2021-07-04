@@ -3,17 +3,19 @@ import { ChainId } from '@dcl/schemas'
 import { builder, getContentsStorageUrl } from 'lib/api/builder'
 import { PEER_URL } from 'lib/api/peer'
 import { getCatalystItemURN } from 'modules/item/utils'
-import { buildDeployData, deploy, makeContentFiles, EntityType } from 'modules/deployment/contentUtils'
+import { buildDeployData, deploy, makeContentFiles, EntityType, computeHashes } from 'modules/deployment/contentUtils'
 import { Collection } from 'modules/collection/types'
 import { CatalystItem, Item, IMAGE_PATH, THUMBNAIL_PATH } from './types'
 import { generateImage } from './utils'
+
+const ITEM_DEPLOYMENT_DELTA_TIMESTAMP = -5 * 1000 // We use 5 seconds before to let the subgraph index the collection creation
 
 export async function deployContents(identity: AuthIdentity, collection: Collection, item: Item, chainId: ChainId) {
   const urn = getCatalystItemURN(collection, item, chainId)
   const [files, image] = await Promise.all([getFiles(item.contents), generateImage(item)])
   const contentFiles = await makeContentFiles({ ...files, [IMAGE_PATH]: image })
   const catalystItem = toCatalystItem(collection, item, chainId)
-  const [data] = await buildDeployData(EntityType.WEARABLE, identity, [urn], catalystItem, contentFiles)
+  const [data] = await buildDeployData(EntityType.WEARABLE, identity, [urn], catalystItem, contentFiles, ITEM_DEPLOYMENT_DELTA_TIMESTAMP)
 
   await deploy(PEER_URL, data)
 
@@ -23,23 +25,6 @@ export async function deployContents(identity: AuthIdentity, collection: Collect
   }
 
   return newItem
-}
-
-export async function getFiles(contents: Record<string, string>) {
-  const promises = Object.keys(contents).map(path => {
-    const url = getContentsStorageUrl(contents[path])
-
-    return fetch(url)
-      .then(resp => resp.blob())
-      .then(blob => ({ path, blob }))
-  })
-
-  const results = await Promise.all(promises)
-
-  return results.reduce<Record<string, Blob>>((files, file) => {
-    files[file.path] = file.blob
-    return files
-  }, {})
 }
 
 function toCatalystItem(collection: Collection, item: Item, chainId: ChainId): CatalystItem {
@@ -64,4 +49,46 @@ function toCatalystItem(collection: Collection, item: Item, chainId: ChainId): C
     createdAt: Date.now(),
     updatedAt: Date.now()
   }
+}
+
+export async function getFiles(contents: Record<string, string>) {
+  const promises = Object.keys(contents).map(path => {
+    const url = getContentsStorageUrl(contents[path])
+
+    return fetch(url)
+      .then(resp => resp.blob())
+      .then(blob => ({ path, blob }))
+  })
+
+  const results = await Promise.all(promises)
+
+  return results.reduce<Record<string, Blob>>((files, file) => {
+    files[file.path] = file.blob
+    return files
+  }, {})
+}
+
+export async function calculateFinalSize(item: Item, newContents: Record<string, Blob>): Promise<number> {
+  const newHashes = await computeHashes(newContents)
+  const filesToDownload: Record<string, string> = {}
+  for (const fileName in item.contents) {
+    if (!newHashes[fileName] || item.contents[fileName] !== newHashes[fileName]) {
+      filesToDownload[fileName] = item.contents[fileName]
+    }
+  }
+
+  const blobs = await getFiles(filesToDownload)
+
+  let imageSize = 0
+  try {
+    const image = await generateImage(item)
+    imageSize = image.size
+  } catch (error) {}
+
+  const finalSize = imageSize + calculateFilesSize(blobs) + calculateFilesSize(newContents)
+  return finalSize
+}
+
+export function calculateFilesSize(files: Record<string, Blob>) {
+  return Object.values(files).reduce((total, blob) => blob.size + total, 0)
 }

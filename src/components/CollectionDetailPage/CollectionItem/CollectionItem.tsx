@@ -1,4 +1,5 @@
 import React from 'react'
+import { Network } from '@dcl/schemas'
 import { t } from 'decentraland-dapps/dist/modules/translation/utils'
 import { Grid, Dropdown, Icon, Button, Mana } from 'decentraland-ui'
 import { Link } from 'react-router-dom'
@@ -6,7 +7,7 @@ import { fromWei } from 'web3x-es/utils'
 
 import { locations } from 'routing/locations'
 import { preventDefault } from 'lib/preventDefault'
-import { isComplete, isEditable, canMintItem, getMaxSupply } from 'modules/item/utils'
+import { isComplete, isFree, canMintItem, canManageItem, getMaxSupply } from 'modules/item/utils'
 import { WearableData } from 'modules/item/types'
 import ItemImage from 'components/ItemImage'
 import { Props } from './CollectionItem.types'
@@ -35,7 +36,7 @@ export default class CollectionItem extends React.PureComponent<Props> {
 
   hasActions() {
     const { item } = this.props
-    return item.isPublished || isComplete(item) || isEditable(item)
+    return item.isPublished || isComplete(item)
   }
 
   renderPrice() {
@@ -43,19 +44,17 @@ export default class CollectionItem extends React.PureComponent<Props> {
 
     return item.price ? (
       <>
-        <div>
-          <Mana>{fromWei(item.price, 'ether')}</Mana>
-        </div>
+        <div>{isFree(item) ? t('global.free') : <Mana network={Network.MATIC}>{fromWei(item.price, 'ether')}</Mana>}</div>
         <div className="subtitle">{t('item.price')}</div>
       </>
-    ) : !isEditable(item) ? (
+    ) : (
       <>
         <div className="link" onClick={preventDefault(this.handleEditPriceAndBeneficiary)}>
           {t('collection_item.set_price')}
         </div>
         <div className="subtitle">{t('item.price')}</div>
       </>
-    ) : null
+    )
   }
 
   render() {
@@ -114,11 +113,11 @@ export default class CollectionItem extends React.PureComponent<Props> {
                   <div className="done action">
                     {t('collection_item.done')} <Icon name="check" />
                   </div>
-                ) : isEditable(item) ? (
+                ) : (
                   <span onClick={preventDefault(this.handleNavigateToEditor)} className="link action">
                     {t('collection_item.edit_item')}
                   </span>
-                ) : null}
+                )}
                 <Dropdown
                   trigger={
                     <Button basic>
@@ -132,11 +131,15 @@ export default class CollectionItem extends React.PureComponent<Props> {
                 >
                   <Dropdown.Menu>
                     <Dropdown.Item text={t('collection_item.open_in_editor')} onClick={this.handleNavigateToEditor} />
-                    {item.price ? (
-                      <Dropdown.Item text={t('collection_item.edit_price')} onClick={this.handleEditPriceAndBeneficiary} />
-                    ) : null}
-                    {!item.isPublished ? (
-                      <Dropdown.Item text={t('collection_item.remove_from_collection')} onClick={this.handleRemoveFromCollection} />
+                    {canManageItem(collection, item, ethAddress) ? (
+                      <>
+                        {item.price ? (
+                          <Dropdown.Item text={t('collection_item.edit_price')} onClick={this.handleEditPriceAndBeneficiary} />
+                        ) : null}
+                        {!item.isPublished ? (
+                          <Dropdown.Item text={t('collection_item.remove_from_collection')} onClick={this.handleRemoveFromCollection} />
+                        ) : null}
+                      </>
                     ) : null}
                   </Dropdown.Menu>
                 </Dropdown>

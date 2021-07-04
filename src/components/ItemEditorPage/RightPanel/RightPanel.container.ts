@@ -1,23 +1,38 @@
 import { connect } from 'react-redux'
-import { getAddress } from 'decentraland-dapps/dist/modules/wallet/selectors'
+import { getAddress, isConnected } from 'decentraland-dapps/dist/modules/wallet/selectors'
+import { isLoadingType } from 'decentraland-dapps/dist/modules/loading/selectors'
 import { RootState } from 'modules/common/types'
-import { getItem } from 'modules/item/selectors'
-import { deleteItemRequest, saveItemRequest, savePublishedItemRequest, setCollection } from 'modules/item/actions'
+import { getItem, getLoading, getError as getItemError } from 'modules/item/selectors'
+import {
+  deleteItemRequest,
+  DEPLOY_ITEM_CONTENTS_REQUEST,
+  saveItemRequest,
+  savePublishedItemRequest,
+  SAVE_PUBLISHED_ITEM_SUCCESS,
+  setCollection
+} from 'modules/item/actions'
 import { openModal } from 'modules/modal/actions'
 import { getSelectedItemId } from 'modules/location/selectors'
 import { getCollection } from 'modules/collection/selectors'
+import { getPendingTransactions } from 'modules/transaction/selectors'
 import { MapStateProps, MapDispatchProps, MapDispatch } from './RightPanel.types'
 import RightPanel from './RightPanel'
 
 const mapState = (state: RootState): MapStateProps => {
   const selectedItemId = getSelectedItemId(state) || ''
   const selectedItem = getItem(state, selectedItemId)
+  const address = getAddress(state) || ''
 
   return {
-    address: getAddress(state),
+    address,
     collection: selectedItemId && selectedItem && selectedItem.collectionId ? getCollection(state, selectedItem.collectionId) : null,
     selectedItem,
-    selectedItemId
+    selectedItemId,
+    error: getItemError(state),
+    isConnected: isConnected(state),
+    isLoading:
+      isLoadingType(getLoading(state), DEPLOY_ITEM_CONTENTS_REQUEST) ||
+      getPendingTransactions(state).some(tx => tx.actionType === SAVE_PUBLISHED_ITEM_SUCCESS)
   }
 }
 

@@ -1,3 +1,4 @@
+import { Address } from 'web3x-es/address'
 import { ChainId, Network, getChainName } from '@dcl/schemas'
 import { utils } from 'decentraland-commons'
 import { getChainConfiguration } from 'decentraland-dapps/dist/lib/chainConfiguration'
@@ -18,8 +19,12 @@ import {
   RARITY_COLOR,
   WearableCategory,
   WearableBodyShapeType,
+  IMAGE_CATEGORIES,
   THUMBNAIL_PATH
 } from './types'
+
+export const MAX_FILE_SIZE = 2097152 // 2MB
+export const MAX_NFTS_PER_MINT = 50
 
 export function getMaxSupply(item: Item) {
   return RARITY_MAX_SUPPLY[item.rarity!]
@@ -52,7 +57,7 @@ export function getBodyShapeType(item: Item): BodyShapeType {
   }
 }
 
-export function getBodyShapes(item: Item) {
+export function getBodyShapes(item: Item): WearableBodyShape[] {
   const bodyShapes = new Set<WearableBodyShape>()
   for (const representation of item.data.representations) {
     for (const bodyShape of representation.bodyShapes) {
@@ -141,7 +146,7 @@ export function toItemObject(items: Item[]) {
   }, {} as Record<string, Item>)
 }
 
-export async function generateImage(item: Item, width = 1024, height = 1024) {
+export async function generateImage(item: Item, width = 256, height = 256) {
   // fetch thumbnail
   const response = await fetch(getThumbnailURL(item))
   if (!response.ok) throw new Error(`Error generating the image: ${response.statusText}`)
@@ -179,27 +184,47 @@ export async function generateImage(item: Item, width = 1024, height = 1024) {
   return blob
 }
 
-export function isComplete(item: Item) {
-  return !isEditable(item) && !!item.beneficiary && !!item.price
+export async function resizeImage(image: Blob, width = 256, height = 256) {
+  // create canvas
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext('2d')
+
+  // fail
+  if (!context) return image
+
+  // render item
+  const img = document.createElement('img')
+  const url = URL.createObjectURL(image)
+  const load = future()
+  img.onload = load.resolve
+  img.src = url
+  await load // wait for image to load
+  URL.revokeObjectURL(url)
+  context.drawImage(img, 0, 0, width, height)
+
+  const blob = future<Blob>()
+  canvas.toBlob(result => (result ? blob.resolve(result) : blob.reject(new Error('Error generating image blob'))))
+  return blob
 }
 
-export function isEditable(item: Item) {
-  const data = item.data as WearableData
-  return !item.rarity || !data.category
+export function isComplete(item: Item) {
+  return item.beneficiary !== undefined && item.price !== undefined
 }
 
 export function isOwner(item: Item, address?: string) {
-  return address && isEqual(item.owner, address)
+  return !!address && isEqual(item.owner, address)
 }
 
-export function canSeeItem(collection: Collection, item: Item, address: string) {
-  return canSeeCollection(collection, address) || isEqual(item.owner, address)
+export function canSeeItem(collection: Collection, item: Item, address: string): boolean {
+  return canSeeCollection(collection, address) || isOwner(item, address)
 }
 
-export function canMintItem(collection: Collection, item: Item, address?: string) {
+export function canMintItem(collection: Collection, item: Item, address?: string): boolean {
   const totalSupply = item.totalSupply || 0
   return (
-    address &&
+    !!address &&
     item.isPublished &&
     item.isApproved &&
     totalSupply < getMaxSupply(item) &&
@@ -207,7 +232,7 @@ export function canMintItem(collection: Collection, item: Item, address?: string
   )
 }
 
-export function canManageItem(collection: Collection, item: Item, address: string) {
+export function canManageItem(collection: Collection, item: Item, address?: string): boolean {
   return isOwner(item, address) || canManageCollectionItems(collection, address)
 }
 
@@ -218,7 +243,8 @@ export function hasOnChainDataChanged(originalItem: Item, item: Item) {
     originalItem.data.category !== item.data.category ||
     originalItem.price !== item.price ||
     originalItem.beneficiary !== item.beneficiary ||
-    originalItem.rarity !== item.rarity
+    originalItem.rarity !== item.rarity ||
+    JSON.stringify(getBodyShapes(originalItem)) !== JSON.stringify(getBodyShapes(item))
   )
 }
 
@@ -230,13 +256,17 @@ export function getRarities() {
   return Object.values(ItemRarity)
 }
 
-function getCategories(contents: Record<string, any> | undefined = {}) {
-  const SIMPLE_WEARABLE_CATEGORIES = [WearableCategory.EYEBROWS, WearableCategory.EYES, WearableCategory.MOUTH]
-  const fileNames = Object.keys(contents)
+export function isImageCategory(category: WearableCategory) {
+  return IMAGE_CATEGORIES.includes(category)
+}
 
-  return fileNames.some(isComplexFile)
-    ? Object.values(WearableCategory).filter(category => !SIMPLE_WEARABLE_CATEGORIES.includes(category))
-    : SIMPLE_WEARABLE_CATEGORIES
+export function isModelCategory(category: WearableCategory) {
+  return !isImageCategory(category)
+}
+
+function getCategories(contents: Record<string, any> | undefined = {}) {
+  const fileNames = Object.keys(contents)
+  return fileNames.some(isModelFile) ? Object.values(WearableCategory).filter(category => isModelCategory(category)) : IMAGE_CATEGORIES
 }
 
 export function getWearableCategories(contents: Record<string, any> | undefined = {}) {
@@ -247,16 +277,28 @@ export function getOverridesCategories(contents: Record<string, any> | undefined
   return getCategories(contents)
 }
 
-export function isImageFile(fileName: string) {
-  return fileName.endsWith('.png')
+export function isFree(item: Item) {
+  return item.price === '0' && item.beneficiary === Address.ZERO.toString()
 }
 
-export function isComplexFile(fileName: string) {
+export function isImageFile(fileName: string) {
+  return fileName.toLowerCase().endsWith('.png')
+}
+
+export function isModelFile(fileName: string) {
+  fileName = fileName.toLowerCase()
   return fileName.endsWith('.gltf') || fileName.endsWith('.glb')
 }
 
 export function isModelPath(fileName: string) {
   fileName = fileName.toLowerCase()
+  // we ignore PNG files that end with "_mask", since those are auxiliary
   const isMask = fileName.includes('_mask')
-  return isComplexFile(fileName) || (fileName.indexOf(THUMBNAIL_PATH) === -1 && !isMask && isImageFile(fileName))
+  return isModelFile(fileName) || (fileName.indexOf(THUMBNAIL_PATH) === -1 && !isMask && isImageFile(fileName))
+}
+
+export function isValidText(text: string) {
+  const invalidCharacters = [':']
+  const invalidCharactersRegex = new RegExp(invalidCharacters.join('|'))
+  return text.search(invalidCharactersRegex) === -1
 }

@@ -66,9 +66,5 @@
 }
 
 .SidebarItem > a:not(.is-selected):hover {
-  background: rgba(var(--bluish-steel-raw), 0.4);
-}
-
-.ui.popup.invalid-representation-popup {
-  height: auto;
+  background: var(--light-blue-steel);
 }

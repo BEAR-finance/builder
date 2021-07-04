@@ -5,6 +5,7 @@ import { takeEvery, call, put, takeLatest, select, take, all } from 'redux-saga/
 import { ChainId } from '@dcl/schemas'
 import { AuthIdentity } from 'dcl-crypto'
 import { ContractName, getContract } from 'decentraland-transactions'
+import { t } from 'decentraland-dapps/dist/modules/translation/utils'
 import { FetchTransactionSuccessAction, FETCH_TRANSACTION_SUCCESS } from 'decentraland-dapps/dist/modules/transaction/actions'
 import { closeModal } from 'decentraland-dapps/dist/modules/modal/actions'
 import { getChainId } from 'decentraland-dapps/dist/modules/wallet/selectors'
@@ -61,10 +62,11 @@ import { getCollection } from 'modules/collection/selectors'
 import { getItemId } from 'modules/location/selectors'
 import { Collection } from 'modules/collection/types'
 import { LoginSuccessAction, LOGIN_SUCCESS } from 'modules/identity/actions'
-import { deployContents } from './export'
+import { deployContents, calculateFinalSize } from './export'
 import { Item } from './types'
 import { getItem } from './selectors'
-import { hasOnChainDataChanged, getMetadata } from './utils'
+import { ItemTooBigError } from './errors'
+import { hasOnChainDataChanged, getMetadata, isValidText, MAX_FILE_SIZE } from './utils'
 
 export function* itemSaga() {
   yield takeEvery(FETCH_ITEMS_REQUEST, handleFetchItemsRequest)
@@ -76,7 +78,7 @@ export function* itemSaga() {
   yield takeLatest(LOGIN_SUCCESS, handleLoginSuccess)
   yield takeLatest(SET_COLLECTION, handleSetCollection)
   yield takeLatest(SET_ITEMS_TOKEN_ID_REQUEST, handleSetItemsTokenIdRequest)
-  yield takeLatest(DEPLOY_ITEM_CONTENTS_REQUEST, handleDeployItemContentsRequest)
+  yield takeEvery(DEPLOY_ITEM_CONTENTS_REQUEST, handleDeployItemContentsRequest)
   yield takeEvery(FETCH_COLLECTION_REQUEST, handleFetchCollectionRequest)
   yield takeLatest(FETCH_TRANSACTION_SUCCESS, handleTransactionSuccess)
 }
@@ -115,8 +117,16 @@ function* handleSaveItemRequest(action: SaveItemRequestAction) {
   const { item: actionItem, contents } = action.payload
   try {
     const item = { ...actionItem, updatedAt: Date.now() }
+
+    if (!isValidText(item.name) || !isValidText(item.description)) {
+      throw new Error(t('sagas.item.invalid_character'))
+    }
     if (item.isPublished) {
-      throw new Error('Item should not be published to save it')
+      throw new Error(t('sagas.item.cant_save_published'))
+    }
+    const finalSize: number = yield call(() => calculateFinalSize(item, contents))
+    if (finalSize > MAX_FILE_SIZE) {
+      throw new ItemTooBigError()
     }
 
     yield call(() => builder.saveItem(item, contents))
@@ -136,16 +146,27 @@ function* handleSavePublishedItemRequest(action: SavePublishedItemRequestAction)
     const originalItem: Item = yield select(state => getItem(state, item.id))
     const collection: Collection = yield select(state => getCollection(state, item.collectionId!))
 
+    if (!isValidText(item.name) || !isValidText(item.description)) {
+      throw new Error(t('sagas.item.invalid_character'))
+    }
     if (!originalItem.isPublished) {
-      throw new Error('Item must be published to save it')
+      throw new Error(t('sagas.item.cant_persist_unpublished'))
     }
     if (!originalItem.collectionId) {
-      throw new Error("Can't save a published without a collection")
+      throw new Error(t('sagas.item.cant_save_without_collection'))
+    }
+
+    const finalSize: number = yield call(() => calculateFinalSize(item, contents))
+    if (finalSize > MAX_FILE_SIZE) {
+      throw new ItemTooBigError()
     }
 
     const [wallet, eth]: [Wallet, Eth] = yield getWallet()
     const maticChainId = wallet.networks.MATIC.chainId
     let txHash: string | undefined
+
+    // Items should be uploaded to the builder server in order to be available to be added to the catalysts
+    yield call(() => builder.saveItemContents(item, contents))
 
     if (hasOnChainDataChanged(originalItem, item)) {
       const metadata = getMetadata(item)
@@ -229,7 +250,7 @@ function* handleDeployItemContentsRequest(action: DeployItemContentsRequestActio
   try {
     const identity: AuthIdentity | undefined = yield getIdentity()
     if (!identity) {
-      throw new Error('Invalid identity')
+      throw new Error(t('sagas.item.invalid_identity'))
     }
 
     const chainId: ChainId = yield select(getChainId)

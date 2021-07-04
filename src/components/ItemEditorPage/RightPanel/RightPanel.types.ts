@@ -18,6 +18,9 @@ export type Props = {
   collection: Collection | null
   selectedItem: Item | null
   selectedItemId: string | null
+  error: string | null
+  isConnected: boolean
+  isLoading: boolean
   onSaveItem: typeof saveItemRequest
   onSavePublishedItem: typeof savePublishedItemRequest
   onDeleteItem: typeof deleteItemRequest
@@ -36,7 +39,10 @@ export type State = {
   isDirty: boolean
 }
 
-export type MapStateProps = Pick<Props, 'address' | 'collection' | 'selectedItem' | 'selectedItemId'>
+export type MapStateProps = Pick<
+  Props,
+  'address' | 'collection' | 'selectedItem' | 'selectedItemId' | 'error' | 'isLoading' | 'isConnected'
+>
 export type MapDispatchProps = Pick<Props, 'onSaveItem' | 'onSavePublishedItem' | 'onDeleteItem' | 'onOpenModal' | 'onSetCollection'>
 export type MapDispatch = Dispatch<
   SaveItemRequestAction | SavePublishedItemRequestAction | DeleteItemRequestAction | OpenModalAction | SetCollectionAction

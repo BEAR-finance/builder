@@ -1,8 +1,9 @@
 import { Eth } from 'web3x-es/eth'
 import { Address } from 'web3x-es/address'
 import { replace } from 'connected-react-router'
-import { select, take, takeEvery, call, put, takeLatest } from 'redux-saga/effects'
+import { select, take, takeEvery, call, put, takeLatest, race } from 'redux-saga/effects'
 import { ContractName, getContract } from 'decentraland-transactions'
+import { t } from 'decentraland-dapps/dist/modules/translation/utils'
 import { FetchTransactionSuccessAction, FETCH_TRANSACTION_SUCCESS } from 'decentraland-dapps/dist/modules/transaction/actions'
 import { Wallet } from 'decentraland-dapps/dist/modules/wallet/types'
 import {
@@ -50,7 +51,11 @@ import {
   rejectCollectionFailure,
   REJECT_COLLECTION_REQUEST,
   PUBLISH_COLLECTION_SUCCESS,
-  saveCollectionRequest
+  saveCollectionRequest,
+  SAVE_COLLECTION_SUCCESS,
+  SAVE_COLLECTION_FAILURE,
+  SaveCollectionFailureAction,
+  SaveCollectionSuccessAction
 } from './actions'
 import { getMethodData, getWallet, sendWalletMetaTransaction } from 'modules/wallet/utils'
 import { buildCollectionForumPost } from 'modules/forum/utils'
@@ -65,6 +70,7 @@ import {
   SAVE_ITEM_SUCCESS,
   SaveItemSuccessAction
 } from 'modules/item/actions'
+import { isValidText } from 'modules/item/utils'
 import { locations } from 'routing/locations'
 import { getCollectionId } from 'modules/location/selectors'
 import { builder } from 'lib/api/builder'
@@ -126,6 +132,10 @@ function* handleSaveItemSuccess(action: SaveItemSuccessAction) {
 function* handleSaveCollectionRequest(action: SaveCollectionRequestAction) {
   const { collection } = action.payload
   try {
+    if (!isValidText(collection.name)) {
+      throw new Error(t('sagas.collection.invalid_character'))
+    }
+
     const items: Item[] = yield select(state => getCollectionItems(state, collection.id))
 
     const [wallet, eth]: [Wallet, Eth] = yield getWallet()
@@ -174,10 +184,28 @@ function* handleDeleteCollectionRequest(action: DeleteCollectionRequestAction) {
 }
 
 function* handlePublishCollectionRequest(action: PublishCollectionRequestAction) {
-  const { collection, items } = action.payload
+  let { collection, items } = action.payload
   try {
+    // To ensure the contract address of the collection is correct, we pre-emptively save it to the server and store the response.
+    // This will re-generate the address and any other data generated on the server (like the salt) before actually publishing it.
+    yield put(saveCollectionRequest(collection))
+
+    const saveCollection: {
+      success: SaveCollectionSuccessAction
+      failure: SaveCollectionFailureAction
+    } = yield race({
+      success: take(SAVE_COLLECTION_SUCCESS),
+      failure: take(SAVE_COLLECTION_FAILURE)
+    })
+
+    if (saveCollection.success) {
+      collection = saveCollection.success.payload.collection
+    } else {
+      throw saveCollection.failure.payload.error
+    }
+
     if (!collection.salt) {
-      throw new Error('The collection has no salt 🧂')
+      throw new Error(t('sagas.item.missing_salt'))
     }
 
     const [wallet, eth]: [Wallet, Eth] = yield getWallet()
@@ -218,10 +246,9 @@ function* handleSetCollectionMintersRequest(action: SetCollectionMintersRequestA
   const { collection, accessList } = action.payload
   try {
     const [wallet, eth]: [Wallet, Eth] = yield getWallet()
-
+    const maticChainId = wallet.networks.MATIC.chainId
     const implementation = new ERC721CollectionV2(eth, Address.fromString(collection.contractAddress!))
 
-    const maticChainId = wallet.networks.MATIC.chainId
     const addresses: Address[] = []
     const values: boolean[] = []
 
